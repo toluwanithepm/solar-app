@@ -1,0 +1,67 @@
+# Supabase CLI configuration for local development (`supabase start`).
+# Hosted project settings (region, SMS provider secrets) are set in the dashboard, not here.
+
+project_id = "solar-app"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = true
+
+# E1-1: phone number + one-time code is the only sign-in method
+[auth.email]
+enabled = false
+
+[auth.sms]
+enabled = true
+enable_confirmations = true
+template = "Your sign-in code is {{ .Code }}"
+max_frequency = "30s"
+
+# Local and demo only: fixed codes for the seeded staff, so no SMS is sent.
+# Phase 5 replaces this with a Send SMS hook that delivers through Termii.
+[auth.sms.test_otp]
+2348031234567 = "123456"
+2348029876543 = "123456"
+2348061112233 = "123456"
+2348062223344 = "123456"
+2348063334455 = "123456"
+2348097778899 = "123456"
+
+# Adds firm_id, staff_id and app_role to every login token (supabase/migrations/*_auth.sql)
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"
+
+[storage]
+enabled = true
+file_size_limit = "1MiB"
+
+# Phase 3 Edge Functions. Customers and Paystack aren't signed in, so JWT checks are off;
+# `public` checks link tokens itself and `paystack-webhook` checks Paystack's signature.
+[functions.public]
+verify_jwt = false
+
+[functions.paystack-webhook]
+verify_jwt = false
+
+# Optional second payment provider (PAYMENT_PROVIDER=bachs); Paystack is the launch default.
+[functions.bachs-webhook]
+verify_jwt = false

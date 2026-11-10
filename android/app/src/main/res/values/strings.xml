@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Solar Field Service</string>
+    <string name="title_activity_main">Solar Field Service</string>
+    <string name="package_name">com.solarfieldservice.app</string>
+    <string name="custom_url_scheme">com.solarfieldservice.app</string>
+</resources>
