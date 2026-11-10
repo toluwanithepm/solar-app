@@ -20,7 +20,7 @@ export function SyncBanner({ style, inset }: { style?: CSSProperties; /** Pad to
   const tone = !online ? ' p-sync--offline' : pending ? ' p-sync--pending' : '';
   const text = online ? (pending ? `Sending ${changes}…` : 'Online · all changes sent') : pending ? `Offline · ${changes} waiting to send` : 'Offline · changes will be kept on this phone';
   const banner = (
-    <div className="sync-banner p-sync" role="status" style={inset ? undefined : style}>
+    <div className={`sync-banner p-sync${tone}`} role="status" style={inset ? undefined : style}>
       <Icon name={online ? (pending ? 'sync' : 'checkCircle') : 'cloudOff'} size={20} color={online && !pending ? 'var(--success)' : undefined} />
       <span className="p-sync__text">{text}</span>
       <button type="button" className="btn btn--text" onClick={() => setForcedOffline(online)}>
