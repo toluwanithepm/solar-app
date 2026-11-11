@@ -181,6 +181,7 @@ export const startTour = () => startTourListener?.();
 export function Tour({ steps }: { steps: TourStep[] }) {
   const [index, setIndex] = useState<number | null>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [underMore, setUnderMore] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -194,7 +195,12 @@ export function Tour({ steps }: { steps: TourStep[] }) {
   useLayoutEffect(() => {
     if (!step) return;
     const measure = () => {
-      const el = document.querySelector(`[data-tour="${step.target}"]`);
+      // The same section can be in the sidebar (desktop) or the bottom bar (phones); on phones the
+      // sections under More point at the More button.
+      const visible = (sel: string) => [...document.querySelectorAll(sel)].find((e) => e.getBoundingClientRect().width > 0);
+      const direct = visible(`[data-tour="${step.target}"]`);
+      const el = direct ?? visible('[data-tour="nav-more"]');
+      setUnderMore(!direct && !!el);
       if (el) {
         el.scrollIntoView({ block: 'nearest' });
         setRect(el.getBoundingClientRect());
@@ -215,8 +221,13 @@ export function Tour({ steps }: { steps: TourStep[] }) {
     setIndex(null);
   };
   const last = index === steps.length - 1;
-  const narrow = window.innerWidth < 900;
-  const pos = rect && !narrow ? { top: Math.max(12, Math.min(rect.top - 8, window.innerHeight - 260)), left: rect.right + 16 } : rect ? { top: rect.bottom + 12, left: 12 } : { top: 80, left: 12 };
+  const narrow = window.innerWidth <= 900;
+  // Desktop: beside the sidebar item. Phones: above the bottom bar item.
+  const pos = rect && !narrow
+    ? { top: Math.max(12, Math.min(rect.top - 8, window.innerHeight - 260)), left: rect.right + 16 }
+    : rect
+      ? { bottom: window.innerHeight - rect.top + 12, left: 12 }
+      : { top: 80, left: 12 };
 
   return (
     <div className="tour" onKeyDown={(e) => e.key === 'Escape' && finish()}>
@@ -231,6 +242,7 @@ export function Tour({ steps }: { steps: TourStep[] }) {
         </h2>
         <p className="t-body muted" style={{ margin: 0 }}>
           {step.text}
+          {underMore && <strong> Find it under More.</strong>}
         </p>
         <div className="tour__progress" aria-hidden="true">
           {steps.map((_, i) => (

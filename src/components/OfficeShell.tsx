@@ -128,9 +128,95 @@ export function OfficeShell({ children, gap = 24 }: { children: ReactNode; gap?:
         </main>
         <Tour steps={officeTour} />
       </div>
+      <BottomNav />
     </div>
   );
 }
+
+/**
+ * Phones and tablets (Material 3 navigation bar, Apple tab bar): the four most used sections stay one tap away
+ * at the bottom, in thumb reach, always labelled and never scrolling. The rest live under More.
+ */
+const barItems = mainNav.slice(0, 4);
+const moreItems = [...mainNav.slice(4), ...footNav];
+
+function BottomNav() {
+  const { pathname } = useLocation();
+  const [open, setOpen] = useState(false);
+  const sheet = useRef<HTMLDialogElement>(null);
+  const moreActive = moreItems.some((i) => isActive(i, pathname));
+
+  useEffect(() => {
+    const d = sheet.current;
+    if (!d) return;
+    if (open && !d.open) d.showModal();
+    if (!open && d.open) d.close();
+  }, [open]);
+  // Close when the page changes (a link in the sheet was followed)
+  useEffect(() => setOpen(false), [pathname]);
+
+  return (
+    <>
+      <nav className="office-tabs no-print" aria-label="Main">
+        {barItems.map((item) => {
+          const active = isActive(item, pathname);
+          return (
+            <Link key={item.to} to={item.to} className={`office-tab${active ? ' active' : ''}`} aria-current={active ? 'page' : undefined} data-tour={item.tour}>
+              <span className="office-tab__pill">
+                <Icon name={item.icon} size={22} />
+              </span>
+              {item.label}
+            </Link>
+          );
+        })}
+        <button type="button" className={`office-tab${moreActive ? ' active' : ''}`} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} data-tour="nav-more">
+          <span className="office-tab__pill">
+            <Icon name="more" size={22} />
+          </span>
+          More
+        </button>
+      </nav>
+      <dialog
+        ref={sheet}
+        className="more-sheet"
+        aria-label="More sections"
+        onClose={() => setOpen(false)}
+        onClick={(e) => e.target === e.currentTarget && setOpen(false)}
+      >
+        <div className="more-sheet__body">
+          <span className="more-sheet__grip" aria-hidden="true" />
+          <ul className="more-sheet__list">
+            {moreItems.map((item) => {
+              const active = isActive(item, pathname);
+              return (
+                <li key={item.to}>
+                  <Link to={item.to} className={`more-sheet__item${active ? ' active' : ''}`} aria-current={active ? 'page' : undefined} onClick={() => setOpen(false)}>
+                    <Icon name={item.icon} size={22} />
+                    <span className="stack" style={{ gap: 0, flex: 1 }}>
+                      <span className="strong">{item.label}</span>
+                      <span className="t-small muted">{moreHints[item.to]}</span>
+                    </span>
+                    <Icon name="chevronRight" size={18} />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <button type="button" className="btn btn--tonal btn--lg btn--block" onClick={() => setOpen(false)}>
+            Close
+          </button>
+        </div>
+      </dialog>
+    </>
+  );
+}
+
+const moreHints: Record<string, string> = {
+  '/office/service': 'Installed systems, service visits and faults',
+  '/office/payments': 'Invoices, payments and reports',
+  '/office/help': 'How it works, questions and terms',
+  '/office/settings': 'Company, prices, staff and billing',
+};
 
 /** Closes a popover on outside click or Escape. */
 function useDismiss(open: boolean, close: () => void) {
@@ -166,10 +252,16 @@ function TopBar({ theme, setTheme }: { theme: ThemePref; setTheme: (t: ThemePref
   return (
     <header className="topbar no-print">
       <div className="topbar__left">
+        {/* Phones and tablets: the sidebar is replaced by this brand and the bottom bar */}
+        <Link to="/office" className="topbar__brand" aria-label={`${company.name || 'Home'}: home`}>
+          <Logo small />
+          <span className="topbar__firm">{company.name || 'Solar Field Service'}</span>
+        </Link>
         {company.subscription.status === 'trial' && (
-          <Link to="/office/settings/billing" className="trial-pill">
+          <Link to="/office/settings/billing" className="trial-pill" aria-label={`Free trial, ${Math.max(0, trialDays)} days left. Open billing`}>
             <Icon name="bolt" size={14} />
-            Free trial · {Math.max(0, trialDays)} days left
+            <span className="trial-pill__long">Free trial · </span>
+            {Math.max(0, trialDays)} days left
           </Link>
         )}
       </div>
