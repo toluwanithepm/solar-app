@@ -104,12 +104,23 @@ type Props = {
   style?: CSSProperties;
   /** Filled glyphs (the bolt in the logo) */
   filled?: boolean;
+  className?: string;
 };
 
-export function Icon({ name, size = 20, color = 'currentColor', style, filled }: Props) {
+export function Icon({ name, size = 20, color = 'currentColor', style, filled, className }: Props) {
   if (name === 'whatsapp') return <WhatsApp size={size} color={color} style={style} />;
   const Glyph = icons[name];
-  return <Glyph size={size} color={color} strokeWidth={size >= 24 ? 2 : 1.75} fill={filled ? color : 'none'} aria-hidden="true" style={{ flexShrink: 0, ...style }} />;
+  return (
+    <Glyph
+      size={size}
+      color={color}
+      strokeWidth={size >= 24 ? 2 : 1.75}
+      fill={filled ? color : 'none'}
+      aria-hidden="true"
+      className={className}
+      style={{ flexShrink: 0, ...style }}
+    />
+  );
 }
 
 /** Brand mark (not in Lucide). */

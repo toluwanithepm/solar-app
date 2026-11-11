@@ -30,6 +30,7 @@ export function SyncBanner({ style, inset }: { style?: CSSProperties; /** Pad to
         name={!isBackend ? 'warning' : online ? (pending ? 'sync' : 'checkCircle') : 'cloudOff'}
         size={20}
         color={!isBackend ? 'var(--warning)' : online && !pending ? 'var(--success)' : undefined}
+        className={isBackend && online && pending ? 'spin' : undefined}
       />
       <span className="p-sync__text">{text}</span>
       <button type="button" className="btn btn--text" onClick={() => setForcedOffline(online)}>

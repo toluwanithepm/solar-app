@@ -4,6 +4,7 @@ import { Icon } from '../../components/Icon';
 import { Dialog, TextField } from '../../components/forms';
 import { AppBar, PhoneScreen } from '../../components/PhoneScreen';
 import { Badge, Button, ProgressBar } from '../../components/ui';
+import { Spinner } from '../../components/Loading';
 import { removeSerial, saveSerial, serialSlots, type SerialSlot } from '../../data/techActions';
 import type { ItemCategory } from '../../data/types';
 import { JobNotFound, useJob } from './parts';
@@ -139,7 +140,7 @@ export function SerialScan() {
           ))}
         </div>
         <p aria-live="polite" className={`scanner__msg${flash ? ' scanner__msg--saved' : ''}`}>
-          {flash ? `Saved ${flash}` : cameraMessage}
+          {camera === 'starting' && !flash && <Spinner size={16} />} {flash ? `Saved ${flash}` : cameraMessage}
         </p>
       </div>
 

@@ -87,14 +87,17 @@ export function Checklist() {
             <span className="t-body">Check in when you arrive so time on site is recorded.</span>
             <Button
               size="lg"
-              disabled={checkingIn}
+              loading={checkingIn}
               onClick={async () => {
                 setCheckingIn(true);
-                checkIn(job.id, await getLocation());
-                setCheckingIn(false);
+                try {
+                  checkIn(job.id, await getLocation());
+                } finally {
+                  setCheckingIn(false);
+                }
               }}
             >
-              <Icon name="pin" size={20} />
+              {!checkingIn && <Icon name="pin" size={20} />}
               {checkingIn ? 'Getting location…' : 'Check in now'}
             </Button>
           </section>

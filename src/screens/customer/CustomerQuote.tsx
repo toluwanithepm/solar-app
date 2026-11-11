@@ -270,7 +270,8 @@ export function PaystackPay({ label, start, disabled, unavailable }: { label: st
     <>
       <Button
         size="xl"
-        disabled={disabled || busy || !!unavailable}
+        disabled={disabled || !!unavailable}
+        loading={busy}
         onClick={async () => {
           setBusy(true);
           setError('');
@@ -371,7 +372,7 @@ export function Gateway({ company, title, amount, onPaid, onBack }: { company: C
         <Button
           size="xl"
           block
-          disabled={busy}
+          loading={busy}
           onClick={() => {
             setBusy(true);
             setTimeout(() => onPaid(method), 700);

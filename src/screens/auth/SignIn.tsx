@@ -92,8 +92,8 @@ export function SignIn() {
               {error}
             </div>
           )}
-          <Button type="submit" size="xl" disabled={busy}>
-            {busy ? 'Sending…' : 'Send code'}
+          <Button type="submit" size="xl" loading={busy}>
+            {busy ? 'Sending code…' : 'Send code'}
           </Button>
         </form>
       ) : (
@@ -109,8 +109,8 @@ export function SignIn() {
               {error}
             </div>
           )}
-          <Button type="submit" size="xl" disabled={busy}>
-            {busy ? 'Checking…' : 'Sign in'}
+          <Button type="submit" size="xl" loading={busy}>
+            {busy ? 'Signing in…' : 'Sign in'}
           </Button>
           <Button variant="text" onClick={() => void send()} disabled={busy}>
             Send a new code

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon, type IconName } from '../../components/Icon';
 import { AppBar, PhoneScreen, SyncBanner } from '../../components/PhoneScreen';
@@ -16,6 +17,7 @@ export function JobDetail() {
   const payments = useDb((d) => d.payments);
   const installation = useDb((d) => d.installations.find((i) => i.id === job?.installationId));
   const ticket = useDb((d) => d.tickets.find((t) => t.id === job?.ticketId));
+  const [starting, setStarting] = useState(false);
   if (!job || !lead) return <JobNotFound />;
 
   // Technicians only see what to collect, never prices or margins (NFR-10)
@@ -33,7 +35,14 @@ export function JobDetail() {
 
   async function start() {
     if (isSurvey) return navigate(`/tech/survey/new?jobId=${job!.id}`);
-    if (!job!.checkIn) checkIn(job!.id, await getLocation());
+    if (!job!.checkIn) {
+      setStarting(true);
+      try {
+        checkIn(job!.id, await getLocation());
+      } finally {
+        setStarting(false);
+      }
+    }
     navigate(`/tech/jobs/${job!.id}/work`);
   }
 
@@ -157,8 +166,8 @@ export function JobDetail() {
             View handover report
           </Button>
         ) : (
-          <Button size="xl" block onClick={start}>
-            {isSurvey ? 'Start site survey' : job.checkIn ? 'Continue job' : 'Check in and start'}
+          <Button size="xl" block onClick={start} loading={starting}>
+            {starting ? 'Getting location…' : isSurvey ? 'Start site survey' : job.checkIn ? 'Continue job' : 'Check in and start'}
           </Button>
         )}
       </div>

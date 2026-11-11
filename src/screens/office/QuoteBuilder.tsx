@@ -11,6 +11,7 @@ import { Icon } from "../../components/Icon";
 import { OfficeShell } from "../../components/OfficeShell";
 import { PhotoThumb } from "../../components/PhotoInput";
 import { Badge, Button, EmptyState, PageHeader } from "../../components/ui";
+import { Spinner } from "../../components/Loading";
 import {
   describeSize,
   effectiveSize,
@@ -709,7 +710,12 @@ function QuoteEditor({ quoteId }: { quoteId: string }) {
                   rel="noreferrer"
                   className="link-break"
                 >
-                  {link || "Creating link…"}
+                  {link || (
+                    <span className="loading-inline">
+                      <Spinner size={14} />
+                      Creating link…
+                    </span>
+                  )}
                 </a>
                 {canEdit && stored.status === "Sent" && (
                   <Button
@@ -760,7 +766,12 @@ function QuoteEditor({ quoteId }: { quoteId: string }) {
           rel="noreferrer"
           className="link-break"
         >
-          {link || "Creating link…"}
+          {link || (
+                    <span className="loading-inline">
+                      <Spinner size={14} />
+                      Creating link…
+                    </span>
+                  )}
         </a>
       </Dialog>
     </OfficeShell>

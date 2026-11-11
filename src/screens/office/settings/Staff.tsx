@@ -221,7 +221,7 @@ function StaffDialog({ user, isNew, isMe, lastOwner, onClose }: { user: User; is
                 <span>Sign {user.name} out of all phones now? Anything they haven't sent yet will be lost.</span>
                 {wipeError && <span className="strong">{wipeError}</span>}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <Button variant="danger" size="sm" disabled={wipe === 'working'} onClick={signOutEverywhere}>
+                  <Button variant="danger" size="sm" loading={wipe === 'working'} onClick={signOutEverywhere}>
                     {wipe === 'working' ? 'Signing out…' : 'Yes, sign out and wipe'}
                   </Button>
                   <Button variant="text" size="sm" disabled={wipe === 'working'} onClick={() => setWipe('idle')}>

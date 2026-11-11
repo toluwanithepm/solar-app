@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { Photo, PhotoKind } from '../data/types';
 import { makePhoto } from '../lib/photos';
 import { Icon } from './Icon';
+import { Spinner } from './Loading';
 import '../styles/phone.css';
 
 /** Camera/file button that hands back a compressed, GPS-tagged Photo. */
@@ -17,11 +18,12 @@ export function PhotoInput({ kind, label, onPhoto, className = 'photo', style }:
         aria-label={label}
         className={`${className} photo-add${error ? ' photo-add--error' : ''}`}
         disabled={busy}
+        aria-busy={busy || undefined}
         onClick={() => ref.current?.click()}
         style={style}
       >
-        <Icon name={error ? 'warning' : 'camera'} size={24} />
-        {busy ? 'Saving…' : error || label}
+        {busy ? <Spinner size={22} /> : <Icon name={error ? 'warning' : 'camera'} size={24} />}
+        {busy ? 'Saving photo…' : error || label}
       </button>
       <input
         ref={ref}

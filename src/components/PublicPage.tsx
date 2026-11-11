@@ -9,6 +9,7 @@ import type { DB } from '../data/types';
 import { Icon } from './Icon';
 import '../styles/phone.css';
 import { EmptyState } from './ui';
+import { PageSkeleton, Spinner } from './Loading';
 
 type PublicCtx = { targetId?: string; token?: string; links: Record<string, string>; provider?: 'paystack' | 'bachs'; refresh: () => Promise<void> };
 const Ctx = createContext<PublicCtx | null>(null);
@@ -94,12 +95,7 @@ export function PublicPage({ kind, param, children }: { kind: LinkKind; param: s
   );
 
   if (state === 'loading') {
-    return (
-      <div role="status" className="t-body muted p-loading">
-        <span className="skeleton" aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 'var(--radius-pill)' }} />
-        Loading…
-      </div>
-    );
+    return <PageSkeleton />;
   }
   if (state === 'invalid') {
     return (
@@ -114,7 +110,7 @@ export function PublicPage({ kind, param, children }: { kind: LinkKind; param: s
     <Ctx.Provider value={{ targetId, token: viaToken ? raw : undefined, links, provider, refresh: load }}>
       {notice && (
         <div role="status" className={`no-print p-toast p-toast--top p-toast--${notice.tone}`}>
-          <Icon name={toneIcon[notice.tone]} size={20} />
+          {notice.tone === 'wait' ? <Spinner size={18} /> : <Icon name={toneIcon[notice.tone]} size={20} />}
           <span style={{ flexGrow: 1 }}>{notice.text}</span>
           <button type="button" className="icon-btn" aria-label="Dismiss" onClick={() => setNotice(null)}>
             <Icon name="close" size={18} />

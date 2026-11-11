@@ -14,6 +14,18 @@ const states = Object.keys(sunHoursByState);
 export function SignUp() {
   const navigate = useNavigate();
   const [startedAt] = useState(() => Date.now());
+  const [busy, setBusy] = useState(false);
+  /** One request at a time; the button shows it is working */
+  const run = (fn: (e: FormEvent) => Promise<unknown>) => async (e: FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    try {
+      await fn(e);
+    } finally {
+      setBusy(false);
+    }
+  };
   const [elapsed, setElapsed] = useState(0);
   const [step, setStep] = useState<'phone' | 'otp' | 'company'>('phone');
   const [phone, setPhone] = useState('');
@@ -81,32 +93,32 @@ export function SignUp() {
       }
     >
       {step === 'phone' && (
-        <form onSubmit={submitPhone} className="stack" style={{ gap: 16 }}>
+        <form onSubmit={run(submitPhone)} className="stack" style={{ gap: 16 }}>
           <TextField id="owner" label="Your name" value={ownerName} onChange={setOwnerName} required />
           <TextField id="phone" label="Phone number" type="tel" inputMode="tel" value={phone} onChange={setPhone} placeholder="0803 123 4567" required />
           <ErrorLine error={error} />
-          <Button type="submit" size="xl">
-            Send code
+          <Button type="submit" size="xl" loading={busy}>
+            {busy ? 'Sending code…' : 'Send code'}
           </Button>
         </form>
       )}
 
       {step === 'otp' && (
-        <form onSubmit={submitOtp} className="stack" style={{ gap: 16 }}>
+        <form onSubmit={run(submitOtp)} className="stack" style={{ gap: 16 }}>
           {sent && <DemoCode code={sent} />}
           <div className="field">
             <label htmlFor="otp">6-digit code</label>
             <input id="otp" className="otp-input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} required />
           </div>
           <ErrorLine error={error} />
-          <Button type="submit" size="xl">
-            Verify
+          <Button type="submit" size="xl" loading={busy}>
+            {busy ? 'Checking code…' : 'Verify'}
           </Button>
         </form>
       )}
 
       {step === 'company' && (
-        <form onSubmit={submitCompany} className="stack" style={{ gap: 16 }}>
+        <form onSubmit={run(submitCompany)} className="stack" style={{ gap: 16 }}>
           <TextField id="cname" label="Company name" value={c.name} onChange={set('name')} required />
           <div className="field">
             <span className="t-small strong">Logo (optional)</span>
@@ -142,8 +154,8 @@ export function SignUp() {
               ? 'Your firm starts on a 14-day free trial with standard checklists and maintenance plans. Add your equipment prices next.'
               : "This starts a new workspace for your firm. The demo's equipment price list is kept so you can edit it with your own prices."}
           </span>
-          <Button type="submit" size="xl">
-            Finish set-up
+          <Button type="submit" size="xl" loading={busy}>
+            {busy ? 'Setting up your company…' : 'Finish set-up'}
           </Button>
         </form>
       )}

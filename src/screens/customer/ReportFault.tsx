@@ -109,8 +109,8 @@ export function ReportFault() {
                     {error}
                   </span>
                 )}
-                <Button type="submit" size="xl" disabled={!text.trim() || busy || (isBackend && !token)}>
-                  {busy ? 'Sending…' : 'Send report'}
+                <Button type="submit" size="xl" disabled={!text.trim() || (isBackend && !token)} loading={busy}>
+                  {busy ? 'Sending your report…' : 'Send report'}
                 </Button>
               </form>
             )}

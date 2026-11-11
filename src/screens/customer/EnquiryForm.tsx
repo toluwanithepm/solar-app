@@ -4,6 +4,7 @@ import { SelectField, TextArea, TextField } from '../../components/forms';
 import { Icon } from '../../components/Icon';
 import { PhoneScreen } from '../../components/PhoneScreen';
 import { Badge, Button, EmptyState } from '../../components/ui';
+import { PageSkeleton } from '../../components/Loading';
 import { sunHoursByState } from '../../data/domain';
 import { createLead } from '../../data/salesActions';
 import type { EnquireResponse, FirmResponse } from '../../../supabase/functions/_shared/contract';
@@ -61,19 +62,14 @@ export function EnquiryForm() {
     setDone(true);
   };
 
+  if (remote.state === 'loading') return <PageSkeleton text="Loading the form…" />;
   if (remote.state !== 'ready') {
     return (
       <PhoneScreen fixed={false}>
         <main className="c-main" role="status" style={{ paddingTop: 64 }}>
-          {remote.state === 'loading' ? (
-            <span className="t-body muted p-loading" style={{ minHeight: 0 }}>
-              Loading…
-            </span>
-          ) : (
-            <div className="card">
-              <EmptyState title="This form link isn't valid">Ask the installer for their current enquiry link.</EmptyState>
-            </div>
-          )}
+          <div className="card">
+            <EmptyState title="This form link isn't valid">Ask the installer for their current enquiry link.</EmptyState>
+          </div>
         </main>
       </PhoneScreen>
     );
@@ -120,8 +116,8 @@ export function EnquiryForm() {
               {error}
             </span>
           )}
-          <Button type="submit" size="xl" disabled={!valid || busy}>
-            {busy ? 'Sending…' : 'Send request'}
+          <Button type="submit" size="xl" disabled={!valid} loading={busy}>
+            {busy ? 'Sending your request…' : 'Send request'}
           </Button>
         </form>
       )}

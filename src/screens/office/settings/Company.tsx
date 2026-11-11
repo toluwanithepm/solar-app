@@ -4,6 +4,7 @@ import { useCan } from '../../../components/Guards';
 import { Icon } from '../../../components/Icon';
 import { Dialog, MoneyField, SelectField, TextField } from '../../../components/forms';
 import { Button, Logo } from '../../../components/ui';
+import { Spinner } from '../../../components/Loading';
 import { sunHoursByState } from '../../../data/domain';
 import { supabase } from '../../../data/remote/sync';
 import { saveCompany } from '../../../data/settingsActions';
@@ -185,7 +186,12 @@ function EnquiryLink() {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
       <a href={url || undefined} target="_blank" rel="noreferrer" className="t-small" style={{ wordBreak: 'break-all', flex: '1 1 260px', padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-        {url || 'Loading…'}
+        {url || (
+          <span className="loading-inline">
+            <Spinner size={14} />
+            Creating your link…
+          </span>
+        )}
       </a>
         <Button
           variant="tonal"

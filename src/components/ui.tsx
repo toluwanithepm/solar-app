@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon, type IconName } from './Icon';
+import { Spinner } from './Loading';
 
 type ButtonVariant = 'primary' | 'tonal' | 'danger' | 'text';
 type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
@@ -18,10 +19,20 @@ type ButtonProps = {
   disabled?: boolean;
   className?: string;
   ariaLabel?: string;
+  /** Busy: shows a spinner, announces it, and blocks a second press */
+  loading?: boolean;
 };
 
-export function Button({ children, variant = 'primary', size = 'md', block, to, href, onClick, type = 'button', disabled, className = '', ariaLabel }: ButtonProps) {
+export function Button({ children, variant = 'primary', size = 'md', block, to, href, onClick, type = 'button', disabled, className = '', ariaLabel, loading }: ButtonProps) {
   const cls = `btn btn--${variant} btn--${size}${block ? ' btn--block' : ''} ${className}`.trim();
+  if (loading) {
+    return (
+      <button type={type} className={cls} disabled aria-busy="true" aria-label={ariaLabel}>
+        <Spinner size={size === 'xl' || size === 'lg' ? 20 : 16} />
+        {children}
+      </button>
+    );
+  }
   if (to && !disabled) {
     return (
       <Link to={to} className={cls} aria-label={ariaLabel}>

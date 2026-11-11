@@ -3,6 +3,7 @@ import { restoreSession } from '../data/auth';
 import { clearSyncError, useSyncStatus } from '../data/remote/sync';
 import { isBackend } from '../data/store';
 import { Icon } from './Icon';
+import { AppSkeleton } from './Loading';
 import '../styles/phone.css';
 
 /** Backend mode: resume the saved sign-in and hold the app until the firm's data has loaded. */
@@ -13,12 +14,7 @@ export function BackendGate({ children }: { children: ReactNode }) {
     if (isBackend) void restoreSession().finally(() => setReady(true));
   }, []);
   if (!ready || (isBackend && status.loading && !status.loaded)) {
-    return (
-      <div role="status" className="t-body muted p-loading">
-        <Icon name="sync" size={20} />
-        Loading your data…
-      </div>
-    );
+    return <AppSkeleton text="Loading your data…" />;
   }
   return (
     <>

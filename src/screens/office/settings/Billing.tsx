@@ -107,7 +107,7 @@ export function Billing() {
           <Button
             size="lg"
             className="plan__cta"
-            disabled={busy}
+            loading={busy}
             onClick={() => {
               if (isBackend) return void payOnline();
               setDone(false);

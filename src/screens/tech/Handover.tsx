@@ -42,11 +42,15 @@ export function Handover() {
   const offerPlan = !done && !installation?.planId && (job.type === 'Installation' || job.type === 'Maintenance');
 
   async function complete() {
+    if (busy) return;
     setBusy(true);
-    const gps = await getLocation();
-    completeWithHandover(job!.id, { dataUrl: signature, name: name.trim() }, gps, planId || undefined);
-    setBusy(false);
-    setCompleted(true);
+    try {
+      const gps = await getLocation();
+      completeWithHandover(job!.id, { dataUrl: signature, name: name.trim() }, gps, planId || undefined);
+      setCompleted(true);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -153,8 +157,8 @@ export function Handover() {
             View handover report
           </Button>
         ) : (
-          <Button size="xl" block disabled={missing.length > 0 || busy} onClick={complete}>
-            {busy ? 'Completing…' : 'Complete job'}
+          <Button size="xl" block disabled={missing.length > 0} loading={busy} onClick={complete}>
+            {busy ? 'Getting location and completing…' : 'Complete job'}
           </Button>
         )}
       </div>

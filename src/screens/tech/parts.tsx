@@ -57,6 +57,7 @@ export function AccountButton() {
   const user = useCurrentUser();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
   if (!user) return null;
   return (
     <>
@@ -76,16 +77,18 @@ export function AccountButton() {
         actions={
           <Button
             variant="tonal"
+            loading={signingOut}
             onClick={async () => {
               // Signing out wipes this phone's saved data, so unsent work would be lost
               const unsent = unsentChanges();
               if (unsent && !window.confirm(`${unsent} change${unsent === 1 ? '' : 's'} on this phone ${unsent === 1 ? 'has' : 'have'} not been sent yet and will be lost if you sign out now. Sign out anyway?`)) return;
+              setSigningOut(true);
               await signOut();
               navigate('/');
             }}
           >
-            <Icon name="logout" size={20} />
-            Sign out
+            {!signingOut && <Icon name="logout" size={20} />}
+            {signingOut ? 'Signing out…' : 'Sign out'}
           </Button>
         }
       >

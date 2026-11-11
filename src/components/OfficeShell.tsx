@@ -4,7 +4,7 @@ import { fmtDateTime, roleLabel } from '../data/domain';
 import { signOut } from '../data/auth';
 import { update, useCurrentUser, useDb } from '../data/store';
 import { Icon, type IconName } from './Icon';
-import { Logo } from './ui';
+import { Button, Logo } from './ui';
 
 const officeNav: { group?: string; items: { to: string; label: string; icon: IconName; end?: boolean }[] }[] = [
   { items: [{ to: '/office', label: 'Home', icon: 'dashboard', end: true }] },
@@ -128,6 +128,7 @@ function TopBar({ theme, setTheme }: { theme: ThemePref; setTheme: (t: ThemePref
   const notifications = useDb((d) => d.notifications);
   const navigate = useNavigate();
   const [open, setOpen] = useState<'bell' | 'account' | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const close = () => setOpen(null);
   const bellRef = useDismiss(open === 'bell', close);
   const accountRef = useDismiss(open === 'account', close);
@@ -217,17 +218,19 @@ function TopBar({ theme, setTheme }: { theme: ThemePref; setTheme: (t: ThemePref
                 ))}
               </div>
             </div>
-            <button
-              type="button"
-              className="btn btn--tonal btn--md"
+            <Button
+              variant="tonal"
+              size="md"
+              loading={signingOut}
               onClick={async () => {
+                setSigningOut(true);
                 await signOut();
                 navigate('/');
               }}
             >
-              <Icon name="logout" size={18} />
-              Sign out
-            </button>
+              {!signingOut && <Icon name="logout" size={18} />}
+              {signingOut ? 'Signing out…' : 'Sign out'}
+            </Button>
           </div>
         )}
       </div>
