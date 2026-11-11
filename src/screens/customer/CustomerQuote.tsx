@@ -28,7 +28,7 @@ export function CustomerQuote() {
     return (
       <PhoneScreen fixed={false}>
         <BrandHeader company={company} />
-        <main style={{ padding: '48px 20px' }} className="stack">
+        <main className="c-main">
           <h1 className="t-display">Quote not found</h1>
           <p className="t-body muted">This link may be wrong or the quote was withdrawn. Contact {company.name} on {company.phone}.</p>
         </main>
@@ -53,6 +53,9 @@ export function CustomerQuote() {
     .filter((x) => x !== null);
   const depositInv = invoices.find((i) => i.quoteId === quote.id && i.kind === 'Deposit');
   const depositPay = payments.find((p) => p.invoiceId === depositInv?.id && p.status === 'Confirmed');
+  // The middle option is pre-selected and shown as the installer's recommendation
+  const named = quote.options.findIndex((o) => /recommend/i.test(o.name));
+  const recommendedIdx = named >= 0 ? named : quote.options.length > 1 ? Math.min(1, quote.options.length - 1) : -1;
   const ask = whatsappLink(company.phone, `Hello ${company.name}, I have a question about quote ${quote.number}.`);
 
   if (paying && !accepted) {
@@ -74,13 +77,14 @@ export function CustomerQuote() {
     <PhoneScreen fixed={false}>
       <BrandHeader company={company} />
 
-      <main style={{ padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <main className="c-main">
         {quote.status === 'Draft' && (
-          <div className="t-small no-print" style={{ padding: '10px 14px', borderRadius: 12, background: '#FDF0D5', color: '#6B4400' }}>
+          <div className="notice notice--warning no-print">
+            <Icon name="alertCircle" size={20} />
             Preview: this quote is still a draft and hasn't been sent.
           </div>
         )}
-        <div className="stack" style={{ padding: '0 4px', gap: 8 }}>
+        <div className="p-intro">
           <span className="t-small muted">
             Quote {quote.number} · {expired ? 'expired' : 'valid until'} {fmtDate(quoteValidUntil(quote))}
           </span>
@@ -93,8 +97,8 @@ export function CustomerQuote() {
         </div>
 
         {accepted && (
-          <section className="card stack" style={{ padding: 20, gap: 8, background: 'var(--success-tint)', color: 'var(--on-success-tint)' }} aria-live="polite">
-            <span className="t-section" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <section className="c-ok" aria-live="polite">
+            <span className="t-section-lg c-ok__title">
               <Icon name="checkCircle" size={22} />
               Thank you, your installation is booked in
             </span>
@@ -105,7 +109,7 @@ export function CustomerQuote() {
             )}
             <span className="t-small">{company.name} will call you to agree an installation date. A receipt was sent to you on WhatsApp.</span>
             {balanceLink && (
-              <a href={balanceLink} className="t-small" style={{ fontWeight: 500, color: 'inherit', textDecoration: 'underline' }}>
+              <a href={balanceLink} className="t-small strong" style={{ color: 'inherit', textDecoration: 'underline' }}>
                 Pay the balance early
               </a>
             )}
@@ -113,69 +117,77 @@ export function CustomerQuote() {
         )}
 
         {(expired || declined) && !accepted && (
-          <section className="card stack" style={{ padding: 20, gap: 8 }}>
-            <span className="t-section">{declined ? 'This quote was closed' : 'This quote has expired'}</span>
-            <span className="t-small muted">Prices may have changed. Ask {company.name} for an updated quote.</span>
+          <section className="notice notice--warning">
+            <Icon name="clock" size={20} style={{ marginTop: 1 }} />
+            <span className="stack" style={{ gap: 2 }}>
+              <span className="t-section" style={{ color: 'inherit' }}>
+                {declined ? 'This quote was closed' : 'This quote has expired'}
+              </span>
+              <span className="t-small">Prices may have changed. Ask {company.name} for an updated quote.</span>
+            </span>
           </section>
         )}
 
         {quote.options.length > 1 && !accepted && (
-          <div role="radiogroup" aria-label="System options" style={{ display: 'grid', gridTemplateColumns: `repeat(${quote.options.length}, minmax(0, 1fr))`, gap: 8 }}>
-            {quote.options.map((o) => {
-              const on = o.id === sel.id;
-              return (
-                <button
-                  key={o.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => setPicked(o.id)}
-                  className="card"
-                  style={{ border: on ? '2px solid var(--primary)' : '2px solid transparent', padding: '12px 10px', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 4, minHeight: 96 }}
-                >
-                  <span style={{ fontSize: 13, fontWeight: 500, color: on ? 'var(--primary)' : 'var(--muted)' }}>{o.name}</span>
-                  <span style={{ fontSize: 15, fontWeight: 500 }}>{naira(optionTotal(o))}</span>
-                  <span className="t-small muted">{o.backupHours} h backup</span>
-                </button>
-              );
-            })}
-          </div>
+          <section aria-labelledby="opts" className="p-section">
+            <h2 id="opts" className="t-section-lg p-section__head">
+              Choose your system
+            </h2>
+            <div role="radiogroup" aria-labelledby="opts" className="option-grid" style={{ gridTemplateColumns: `repeat(${quote.options.length}, minmax(0, 1fr))` }}>
+              {quote.options.map((o, i) => {
+                const on = o.id === sel.id;
+                const rec = i === recommendedIdx;
+                const nameIsBadge = rec && /^recommended$/i.test(o.name.trim());
+                return (
+                  <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => setPicked(o.id)} className={`card option${rec ? ' option--recommended' : ''}`}>
+                    <span className="option__radio" aria-hidden="true" />
+                    {rec && (
+                      <span className="badge badge--blue option__badge">
+                        Recommended
+                      </span>
+                    )}
+                    {!nameIsBadge && <span className="option__name">{o.name}</span>}
+                    <span className="option__price num">{naira(optionTotal(o))}</span>
+                    <span className="t-small muted">{o.backupHours} h backup</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         )}
 
-        <section className="card stack" style={{ padding: '24px 20px', gap: 20 }} aria-live="polite">
-          <div className="stack" style={{ gap: 4 }}>
-            <span className="t-small muted">{sel.name}</span>
-            <span style={{ fontSize: 36, lineHeight: '44px', fontWeight: 500, letterSpacing: -0.5 }}>{naira(total)}</span>
-            <span className="muted" style={{ fontSize: 14, lineHeight: '20px' }}>
-              Installed, VAT included
-            </span>
+        <section className="card card--pad stack" style={{ gap: 16 }} aria-live="polite">
+          <div className="stack" style={{ gap: 2 }}>
+            <span className="p-overline">{sel.name} · total</span>
+            <span className="c-total num">{naira(total)}</span>
+            <span className="t-small muted">Installed, VAT included</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, paddingTop: 20, borderTop: '1px solid var(--divider)' }}>
+          <div className="p-grid-2" style={{ gap: 16, paddingTop: 16, borderTop: '1px solid var(--divider)' }}>
             <Stat label="Night backup" value={`${sel.backupHours} hours`} />
             <Stat label="Deposit to start" value={naira(deposit)} />
           </div>
         </section>
 
-        <section aria-labelledby="inc" className="stack" style={{ gap: 8 }}>
-          <h2 id="inc" className="t-section" style={{ padding: '0 4px' }}>
+        <section aria-labelledby="inc" className="p-section">
+          <h2 id="inc" className="t-section-lg p-section__head">
             What's included
           </h2>
           <ul className="card card--list" style={{ margin: 0, listStyle: 'none' }}>
             {equipment.map((l) => (
               <li key={l.id} className="row" style={{ gap: 12 }}>
-                <Icon name="check" size={20} color="var(--primary)" />
+                <Icon name="check" size={20} color="var(--success)" />
                 <span className="row__main">{l.qty > 1 ? `${l.qty} × ${l.description}` : l.description}</span>
               </li>
             ))}
             <li className="row" style={{ gap: 12 }}>
-              <Icon name="check" size={20} color="var(--primary)" />
+              <Icon name="check" size={20} color="var(--success)" />
               Installation, testing and handover
             </li>
           </ul>
         </section>
 
-        <section aria-labelledby="war" className="stack" style={{ gap: 8 }}>
-          <h2 id="war" className="t-section" style={{ padding: '0 4px' }}>
+        <section aria-labelledby="war" className="p-section">
+          <h2 id="war" className="t-section-lg p-section__head">
             Warranty and payment
           </h2>
           <div className="card card--list">
@@ -187,11 +199,11 @@ export function CustomerQuote() {
             ))}
             <div className="row row--between">
               <span>Deposit to accept ({quote.depositPct}%)</span>
-              <span style={{ fontWeight: 500 }}>{naira(deposit)}</span>
+              <span className="strong num">{naira(deposit)}</span>
             </div>
             <div className="row row--between">
               <span>Balance at handover</span>
-              <span className="muted">{naira(total - deposit)}</span>
+              <span className="num">{naira(total - deposit)}</span>
             </div>
             <div className="row row--between">
               <span>Valid until</span>
@@ -200,15 +212,12 @@ export function CustomerQuote() {
           </div>
         </section>
 
-        <span className="t-small muted" style={{ padding: '0 4px' }}>
+        <span className="t-small faint p-footer-note">
           {company.name} · {company.address} · {company.phone}
         </span>
       </main>
 
-      <div
-        className="no-print"
-        style={{ position: 'sticky', bottom: 0, marginTop: 'auto', padding: '16px 16px 24px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--surface)', borderTop: '1px solid var(--divider)' }}
-      >
+      <div className="no-print c-cta">
         {!accepted && !expired && !declined &&
           (isBackend ? (
             <PaystackPay
@@ -223,11 +232,12 @@ export function CustomerQuote() {
             </Button>
           ))}
         <div style={{ display: 'flex', gap: 4 }}>
-          <Button variant="text" size="lg" block onClick={() => window.print()}>
+          <Button variant="text" size="md" block onClick={() => window.print()}>
             <Icon name="download" size={20} />
             Save as PDF
           </Button>
-          <Button variant="text" size="lg" block href={ask}>
+          <Button variant="text" size="md" block href={ask}>
+            <Icon name="whatsapp" size={20} />
             Ask a question
           </Button>
         </div>
@@ -238,11 +248,15 @@ export function CustomerQuote() {
 
 export function BrandHeader({ company }: { company: Company }) {
   return (
-    <header style={{ height: 64, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', borderBottom: '1px solid var(--divider)', flexShrink: 0 }}>
-      {company.logoDataUrl ? <img src={company.logoDataUrl} alt="" style={{ width: 32, height: 32, borderRadius: 10, objectFit: 'cover' }} /> : <Logo small />}
-      <span className="t-body" style={{ fontWeight: 500 }}>
-        {company.name}
-      </span>
+    <header className="brand-head">
+      {company.logoDataUrl ? <img src={company.logoDataUrl} alt="" className="brand-head__logo" /> : <Logo />}
+      <span className="brand-head__name">{company.name}</span>
+      {company.phone && (
+        <a href={`tel:${company.phone}`} className="btn btn--text btn--md no-print" style={{ marginLeft: 'auto' }} aria-label={`Call ${company.name}`}>
+          <Icon name="phone" size={18} />
+          Call
+        </a>
+      )}
     </header>
   );
 }
@@ -269,11 +283,10 @@ export function PaystackPay({ label, start, disabled, unavailable }: { label: st
           }
         }}
       >
+        {!busy && <Icon name="shield" size={20} />}
         {busy ? 'Opening secure payment…' : label}
       </Button>
-      <span className="t-small muted" style={{ textAlign: 'center' }}>
-        {unavailable ?? methodsNote}
-      </span>
+      <span className="t-small muted c-cta__note">{unavailable ?? methodsNote}</span>
       {error && (
         <span role="alert" className="t-small danger" style={{ textAlign: 'center' }}>
           {error}
@@ -301,23 +314,23 @@ export function Gateway({ company, title, amount, onPaid, onBack }: { company: C
   return (
     <PhoneScreen fixed={false}>
       <BrandHeader company={company} />
-      <main style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <button type="button" onClick={onBack} className="btn btn--text" style={{ alignSelf: 'flex-start', height: 40, padding: 0 }}>
+      <main className="c-main" style={{ paddingTop: 12 }}>
+        <button type="button" onClick={onBack} className="btn btn--text btn--md" style={{ alignSelf: 'flex-start', marginLeft: -8 }}>
           <Icon name="back" size={20} />
           Back
         </button>
-        <div className="stack" style={{ gap: 4, padding: '0 4px' }}>
+        <div className="p-intro" style={{ gap: 2 }}>
           <span className="t-small muted">{title}</span>
-          <span style={{ fontSize: 32, lineHeight: '40px', fontWeight: 500 }}>{naira(amount)}</span>
+          <span className="c-total c-total--md num">{naira(amount)}</span>
         </div>
 
-        <fieldset className="card" style={{ border: 0, margin: 0, padding: '4px 20px' }}>
-          <legend className="t-section" style={{ padding: '16px 0 4px', float: 'left', width: '100%' }}>
+        <fieldset className="card card--list" style={{ margin: 0 }}>
+          <legend className="t-section-lg" style={{ padding: '16px 0 4px', float: 'left', width: '100%' }}>
             How would you like to pay?
           </legend>
           {methods.map((m) => (
-            <label key={m.id} className="row" style={{ cursor: 'pointer', minHeight: 64, padding: '8px 0', clear: 'both' }}>
-              <input type="radio" name="method" checked={method === m.id} onChange={() => setMethod(m.id)} style={{ width: 20, height: 20, margin: 0, accentColor: 'var(--primary)' }} />
+            <label key={m.id} className="choice" style={{ clear: 'both', minHeight: 64 }}>
+              <input type="radio" name="method" checked={method === m.id} onChange={() => setMethod(m.id)} />
               <span className="row__main">
                 <span>{m.label}</span>
                 <span className="t-small muted">{m.note}</span>
@@ -326,12 +339,14 @@ export function Gateway({ company, title, amount, onPaid, onBack }: { company: C
           ))}
         </fieldset>
 
-        <section className="card stack" style={{ padding: 20, gap: 8 }} aria-live="polite">
+        <section className="card card--pad stack" style={{ gap: 6 }} aria-live="polite">
           {method === 'Card' && <span className="t-body">You'll enter your card details on the payment provider's secure page. {company.name} never sees your card number.</span>}
           {method === 'Transfer' && (
             <>
               <span className="t-small muted">Transfer exactly {naira(amount)} to</span>
-              <span className="t-title">{company.accountNumber}</span>
+              <span className="t-display num" style={{ letterSpacing: '0.02em' }}>
+                {company.accountNumber}
+              </span>
               <span className="t-body">
                 {company.bankName} · {company.accountName}
               </span>
@@ -340,18 +355,19 @@ export function Gateway({ company, title, amount, onPaid, onBack }: { company: C
           {method === 'USSD' && (
             <>
               <span className="t-small muted">Dial on the phone linked to your bank account</span>
-              <span className="t-title" style={{ letterSpacing: 1 }}>
+              <span className="t-display" style={{ letterSpacing: '0.04em' }}>
                 {ussd}
               </span>
             </>
           )}
         </section>
 
-        <div className="t-small" style={{ padding: '10px 14px', borderRadius: 12, background: '#FDF0D5', color: '#6B4400' }}>
+        <div className="notice notice--info">
+          <Icon name="alertCircle" size={20} />
           Demo: the payment gateway isn't connected, so payment is confirmed straight away.
         </div>
       </main>
-      <div style={{ position: 'sticky', bottom: 0, marginTop: 'auto', padding: '16px 16px 24px', background: 'var(--surface)', borderTop: '1px solid var(--divider)' }}>
+      <div className="c-cta">
         <Button
           size="xl"
           block

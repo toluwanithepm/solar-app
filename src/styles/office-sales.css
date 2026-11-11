@@ -19,7 +19,7 @@
     grid-column: 1 / -1;
   }
 }
-@container (max-width: 420px) {
+@container (max-width: 340px) {
   .kpi-row > .kpi-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -304,7 +304,7 @@
 }
 
 /* ---------- Key/value lists (quote summary, survey) ---------- */
-.kv {
+.sum-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -312,19 +312,19 @@
   font-size: 14px;
   line-height: 20px;
 }
-.kv > :first-child {
+.sum-row > :first-child {
   color: var(--muted);
 }
-.kv > :last-child {
+.sum-row > :last-child {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.kv--total {
+.sum-row--total {
   padding-top: 12px;
   border-top: 1px solid var(--divider);
   font-weight: 600;
 }
-.kv--total > :first-child {
+.sum-row--total > :first-child {
   color: var(--text);
 }
 
@@ -483,4 +483,17 @@
 }
 .attn__title::first-letter {
   text-transform: uppercase;
+}
+.card__head--wrap {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.card__head--wrap h2 {
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .card__head--wrap .card__head-meta {
+    order: 3;
+    flex-basis: 100%;
+  }
 }

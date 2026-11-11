@@ -1,7 +1,7 @@
 import { Icon } from '../../components/Icon';
 import { PhotoThumb } from '../../components/PhotoInput';
 import { usePublicLink, usePublicTarget } from '../../components/PublicPage';
-import { Button, EmptyState, Logo } from '../../components/ui';
+import { Badge, Button, EmptyState, Logo } from '../../components/ui';
 import { addMonths, categoryLabel, fmtDate, fmtTime } from '../../data/domain';
 import { useDb } from '../../data/store';
 
@@ -17,7 +17,7 @@ export function HandoverReport() {
 
   if (!job || !lead) {
     return (
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: 24 }}>
+      <div className="report">
         <EmptyState title="Report not found">Ask your installer to send the link again.</EmptyState>
       </div>
     );
@@ -35,8 +35,8 @@ export function HandoverReport() {
   const after = job.photos.filter((p) => p.kind === 'after');
 
   const section = (title: string, children: React.ReactNode) => (
-    <section className="stack" style={{ gap: 8, breakInside: 'avoid' }} aria-label={title}>
-      <h2 className="t-section" style={{ padding: '0 4px' }}>
+    <section className="p-section" style={{ breakInside: 'avoid' }} aria-label={title}>
+      <h2 className="t-section-lg p-section__head">
         {title}
       </h2>
       {children}
@@ -44,27 +44,28 @@ export function HandoverReport() {
   );
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 16px 48px', display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {company.logoDataUrl ? <img src={company.logoDataUrl} alt="" style={{ width: 40, height: 40, borderRadius: 12, objectFit: 'cover' }} /> : <Logo />}
+    <div className="report">
+      <header className="report__head">
+        {company.logoDataUrl ? <img src={company.logoDataUrl} alt="" className="brand-head__logo" style={{ width: 40, height: 40 }} /> : <Logo />}
         <div className="stack" style={{ flexGrow: 1, gap: 2 }}>
-          <span className="t-section">{company.name}</span>
+          <span className="brand-head__name">{company.name}</span>
           <span className="t-small muted">
             {company.phone} · {company.address}
           </span>
         </div>
-        <Button variant="tonal" className="no-print" onClick={() => window.print()}>
+        <Button variant="tonal" size="lg" className="no-print" onClick={() => window.print()}>
           <Icon name="print" size={20} />
           Save as PDF
         </Button>
       </header>
 
-      <div className="stack" style={{ gap: 8 }}>
+      <div className="p-intro">
         <span className="t-overline">
           {job.type} handover · {job.number}
         </span>
         <h1 className="t-display">{lead.name}</h1>
         <span className="t-body muted">{job.address}</span>
+        <span>{job.status === 'Done' ? <Badge tone="green">Completed and signed off</Badge> : <Badge tone="blue">{job.status}</Badge>}</span>
       </div>
 
       <div className="card card--list">
@@ -72,13 +73,14 @@ export function HandoverReport() {
           ['Date', fmtDate(date)],
           ['Time on site', job.checkIn ? `${fmtTime(job.checkIn.at)} – ${fmtTime(job.checkOut?.at)}` : '—'],
           ['Technicians', techs.join(', ') || '—'],
-          ['Status', job.status === 'Done' ? 'Completed' : job.status],
           ...(installation ? [['Next service', fmtDate(installation.nextServiceAt)]] : []),
           ...(plan ? [['Maintenance plan', `${plan.name} · ${plan.visitsPerYear} visits a year`]] : []),
         ].map(([k, v]) => (
           <div key={k} className="row row--between">
             <span className="muted">{k}</span>
-            <span style={{ textAlign: 'right' }}>{v}</span>
+            <span className="strong" style={{ textAlign: 'right' }}>
+              {v}
+            </span>
           </div>
         ))}
       </div>
@@ -101,7 +103,7 @@ export function HandoverReport() {
                   <tr key={i.id}>
                     <td>{i.label}</td>
                     <td className="muted">{categoryLabel[i.category]}</td>
-                    <td style={{ fontFamily: 'ui-monospace, monospace', fontSize: 13 }}>{i.serial ?? '—'}</td>
+                    <td className="serial-code">{i.serial ?? '—'}</td>
                     <td>{fmtDate(i.warrantyEndsAt)}</td>
                   </tr>
                 ))}
@@ -116,8 +118,11 @@ export function HandoverReport() {
           <ul className="card card--list" style={{ margin: 0, listStyle: 'none' }}>
             {job.checklist.map((s) => (
               <li key={s.id} className="row" style={{ gap: 12 }}>
-                <Icon name={s.done ? 'check' : 'close'} size={20} color={s.done ? 'var(--primary)' : 'var(--faint)'} />
-                <span style={{ color: s.done ? 'var(--text)' : 'var(--muted)' }}>{s.label}</span>
+                <Icon name={s.done ? 'checkCircle' : 'circle'} size={20} color={s.done ? 'var(--success)' : 'var(--faint)'} />
+                <span className="row__main" style={{ color: s.done ? 'var(--text)' : 'var(--muted)' }}>
+                  {s.label}
+                </span>
+                {!s.done && <span className="t-small faint">Not done</span>}
               </li>
             ))}
           </ul>,
@@ -158,15 +163,19 @@ export function HandoverReport() {
         )}
 
       <section className="card card--pad stack" style={{ gap: 8, breakInside: 'avoid' }} aria-label="Need help">
-        <span className="t-section">Something not working?</span>
-        <span className="t-small muted">
-          Call {company.phone} or report a fault online and we will get back to you.
-        </span>
-        {faultLink && (
-          <a href={faultLink} className="no-print" style={{ fontWeight: 500 }}>
-            Report a fault
-          </a>
-        )}
+        <span className="t-section-lg">Something not working?</span>
+        <span className="t-small muted">Call {company.phone} or report a fault online and we will get back to you.</span>
+        <div className="no-print" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+          {faultLink && (
+            <a href={faultLink} className="btn btn--primary btn--lg">
+              Report a fault
+            </a>
+          )}
+          <Button variant="tonal" size="lg" href={`tel:${company.phone}`}>
+            <Icon name="phone" size={20} />
+            Call us
+          </Button>
+        </div>
       </section>
     </div>
   );

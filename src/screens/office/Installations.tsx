@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import '../../styles/office-ops.css';
+import { Icon } from '../../components/Icon';
 import { OfficeShell } from '../../components/OfficeShell';
 import { Badge, EmptyState, PageHeader, Segmented } from '../../components/ui';
 import { DAY, categoryLabel, fmtDate } from '../../data/domain';
@@ -31,7 +33,7 @@ export function Installations() {
   return (
     <OfficeShell>
       <PageHeader title="Equipment register" subtitle={`${db.installations.length} systems installed · ${db.installations.reduce((s, i) => s + i.items.length, 0)} items under record`} />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+      <div className="ops-filters">
         <Segmented
           kind="tab"
           label="Register view"
@@ -42,23 +44,18 @@ export function Installations() {
             { id: 'warranties', name: `Warranties ending · ${expiring.length}` },
           ]}
         />
-        <label style={{ flex: '0 1 340px', marginLeft: 'auto', height: 44, borderRadius: 22, background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', color: 'var(--muted)' }}>
-          <input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search customer, site or serial"
-            aria-label="Search customer, site or serial"
-            style={{ border: 0, background: 'transparent', outline: 'none', fontSize: 15, color: 'var(--text)', flexGrow: 1, minWidth: 0 }}
-          />
+        <label className="ops-search">
+          <Icon name="search" size={16} />
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search customer, site or serial" aria-label="Search customer, site or serial" />
         </label>
       </div>
 
       {tab === 'register' ? (
-        <section className="card table-scroll" aria-label="Installations">
+        <section className="card" aria-label="Installations">
           {installs.length === 0 ? (
-            <EmptyState title="No installations found" />
+            <EmptyState title="No installations found">{needle ? 'Try a different name, site or serial number.' : 'Systems are added here when an installation job is completed.'}</EmptyState>
           ) : (
+            <div className="table-scroll">
             <table className="table">
               <thead>
                 <tr>
@@ -78,15 +75,19 @@ export function Installations() {
                   const due = (new Date(i.nextServiceAt).getTime() - now) / DAY;
                   const serialHit = needle ? i.items.find((it) => it.serial?.toLowerCase().includes(needle)) : undefined;
                   return (
-                    <tr key={i.id} onClick={() => navigate(`/office/installations/${i.id}`)} style={{ cursor: 'pointer' }}>
+                    <tr key={i.id} className="row-link" onClick={() => navigate(`/office/installations/${i.id}`)}>
                       <td>
-                        <Link to={`/office/installations/${i.id}`} style={{ color: 'var(--text)', fontWeight: 500 }}>
+                        <Link to={`/office/installations/${i.id}`} className="cell-link">
                           {lead(i.leadId)?.name}
                         </Link>
-                        {serialHit && <div className="t-small muted">Serial {serialHit.serial}</div>}
+                        {serialHit && (
+                          <div className="t-caption faint">
+                            Serial <span className="mono">{serialHit.serial}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="muted">{i.site}</td>
-                      <td>{fmtDate(i.installedAt)}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(i.installedAt)}</td>
                       <td className="muted">{techNames(i.technicianIds)}</td>
                       <td className="num">{i.items.length}</td>
                       <td>{due < 0 ? <Badge tone="red">Overdue</Badge> : due <= 7 ? <Badge tone="amber">{fmtDate(i.nextServiceAt)}</Badge> : fmtDate(i.nextServiceAt)}</td>
@@ -96,13 +97,15 @@ export function Installations() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </section>
       ) : (
-        <section className="card table-scroll" aria-label="Warranties ending in the next 90 days">
+        <section className="card" aria-label="Warranties ending in the next 90 days">
           {expiring.length === 0 ? (
             <EmptyState title="No warranties end in the next 90 days" />
           ) : (
+            <div className="table-scroll">
             <table className="table">
               <thead>
                 <tr>
@@ -117,22 +120,24 @@ export function Installations() {
               </thead>
               <tbody>
                 {expiring.map(({ ins, it, days }) => (
-                  <tr key={it.id} onClick={() => navigate(`/office/installations/${ins.id}`)} style={{ cursor: 'pointer' }}>
+                  <tr key={it.id} className="row-link" onClick={() => navigate(`/office/installations/${ins.id}`)}>
                     <td>
-                      <Link to={`/office/installations/${ins.id}`} style={{ color: 'var(--text)' }}>
+                      <Link to={`/office/installations/${ins.id}`} className="cell-link">
                         {lead(ins.leadId)?.name}
                       </Link>
                     </td>
                     <td>
-                      {it.label} <span className="muted">· {categoryLabel[it.category]}</span>
+                      {it.label}
+                      <div className="t-caption faint">{categoryLabel[it.category]}</div>
                     </td>
-                    <td style={{ fontFamily: 'ui-monospace, monospace' }}>{it.serial ?? '—'}</td>
-                    <td>{fmtDate(it.warrantyEndsAt)}</td>
-                    <td className="num">{days <= 30 ? <Badge tone="red">{days}</Badge> : days}</td>
+                    <td className="mono">{it.serial ?? '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(it.warrantyEndsAt)}</td>
+                    <td className="num">{days <= 30 ? <Badge tone="red">{days} days</Badge> : <Badge tone="amber">{days} days</Badge>}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </section>
       )}

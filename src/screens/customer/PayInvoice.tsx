@@ -24,7 +24,7 @@ export function PayInvoice() {
     return (
       <PhoneScreen fixed={false}>
         <BrandHeader company={company} />
-        <main style={{ padding: '48px 20px' }} className="stack">
+        <main className="c-main">
           <h1 className="t-display">Payment link not found</h1>
           <p className="t-body muted">
             Contact {company.name} on {company.phone}.
@@ -57,20 +57,20 @@ export function PayInvoice() {
   return (
     <PhoneScreen fixed={false}>
       <BrandHeader company={company} />
-      <main style={{ padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <div className="stack" style={{ padding: '0 4px', gap: 8 }}>
+      <main className="c-main">
+        <div className="p-intro">
           <span className="t-small muted">
             Invoice {inv.number} · {lead.name}
           </span>
           <h1 className="t-display">{inv.description}</h1>
           <span>
-            <Badge tone={status === 'Paid' ? 'green' : status === 'Overdue' ? 'red' : 'blue'}>{status === 'Due' ? `Due ${fmtDate(inv.dueAt)}` : status}</Badge>
+            <Badge tone={status === 'Paid' ? 'green' : status === 'Overdue' ? 'red' : 'amber'}>{status === 'Due' ? `Due ${fmtDate(inv.dueAt)}` : status === 'Pending approval' ? 'Waiting for confirmation' : status}</Badge>
           </span>
         </div>
 
         {balance === 0 ? (
-          <section className="card stack" style={{ padding: 20, gap: 8, background: 'var(--success-tint)', color: 'var(--on-success-tint)' }} aria-live="polite">
-            <span className="t-section" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <section className="c-ok" aria-live="polite">
+            <span className="t-section-lg c-ok__title">
               <Icon name="checkCircle" size={22} />
               Paid in full. Thank you!
             </span>
@@ -81,23 +81,41 @@ export function PayInvoice() {
             )}
           </section>
         ) : (
-          <section className="card stack" style={{ padding: '24px 20px', gap: 4 }}>
-            <span className="t-small muted">Amount due</span>
-            <span style={{ fontSize: 36, lineHeight: '44px', fontWeight: 500, letterSpacing: -0.5 }}>{naira(balance)}</span>
-            {invoicePaid(db, inv.id) > 0 && <span className="t-small muted">{naira(invoicePaid(db, inv.id))} of {naira(inv.amount)} already paid</span>}
-          </section>
+          <>
+            {status === 'Pending approval' && (
+              <section className="c-wait" role="status">
+                <span className="t-section-lg c-ok__title">
+                  <Icon name="clock" size={22} />
+                  Waiting for payment confirmation
+                </span>
+                <span className="t-small">{company.name} is checking the payment you made. This page will show it as paid once it is confirmed.</span>
+              </section>
+            )}
+            <section className="card card--pad stack" style={{ gap: 2 }}>
+              <span className="p-overline">Amount due</span>
+              <span className="c-total num">{naira(balance)}</span>
+              {invoicePaid(db, inv.id) > 0 && (
+                <span className="t-small muted">
+                  {naira(invoicePaid(db, inv.id))} of {naira(inv.amount)} already paid
+                </span>
+              )}
+            </section>
+          </>
         )}
 
         {confirmed.length > 0 && (
-          <section aria-labelledby="hist" className="stack" style={{ gap: 8 }}>
-            <h2 id="hist" className="t-section" style={{ padding: '0 4px' }}>
+          <section aria-labelledby="hist" className="p-section">
+            <h2 id="hist" className="t-section-lg p-section__head">
               Payments received
             </h2>
             <div className="card card--list">
               {confirmed.map((p) => (
-                <div key={p.id} className="row row--between">
+                <div key={p.id} className="row">
+                  <Icon name="checkCircle" size={20} color="var(--success)" />
                   <span className="row__main">
-                    <span>{naira(p.amount)}</span>
+                    <span className="strong num">
+                      {naira(p.amount)}
+                    </span>
                     <span className="t-small muted">
                       {p.method} · {fmtDate(p.at)} · {p.reference}
                     </span>
@@ -108,12 +126,12 @@ export function PayInvoice() {
           </section>
         )}
 
-        <span className="t-small muted" style={{ padding: '0 4px' }}>
+        <span className="t-small faint p-footer-note">
           {company.name} · {company.address} · {company.phone}
         </span>
       </main>
 
-      <div style={{ position: 'sticky', bottom: 0, marginTop: 'auto', padding: '16px 16px 24px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--surface)', borderTop: '1px solid var(--divider)' }}>
+      <div className="no-print c-cta">
         {balance > 0 &&
           (isBackend ? (
             <PaystackPay
@@ -126,7 +144,8 @@ export function PayInvoice() {
               Pay {naira(balance)}
             </Button>
           ))}
-        <Button variant="text" size="lg" href={whatsappLink(company.phone, `Hello ${company.name}, I have a question about invoice ${inv.number}.`)}>
+        <Button variant="text" size="md" href={whatsappLink(company.phone, `Hello ${company.name}, I have a question about invoice ${inv.number}.`)}>
+          <Icon name="whatsapp" size={20} />
           Ask a question
         </Button>
       </div>

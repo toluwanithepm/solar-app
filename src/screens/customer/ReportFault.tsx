@@ -4,7 +4,8 @@ import { PhoneScreen } from '../../components/PhoneScreen';
 import { PhotoInput, PhotoThumb } from '../../components/PhotoInput';
 import { usePublicRefresh, usePublicTarget, usePublicToken } from '../../components/PublicPage';
 import { TextArea } from '../../components/forms';
-import { Badge, Button, EmptyState, Logo } from '../../components/ui';
+import { Badge, Button, EmptyState } from '../../components/ui';
+import { BrandHeader } from './CustomerQuote';
 import { fmtDate, fmtDateTime } from '../../data/domain';
 import { createTicket } from '../../data/opsActions';
 import type { ReportResponse } from '../../../supabase/functions/_shared/contract';
@@ -29,19 +30,16 @@ export function ReportFault() {
 
   return (
     <PhoneScreen fixed={false}>
-      <header style={{ height: 64, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', borderBottom: '1px solid var(--divider)', flexShrink: 0 }}>
-        {company.logoDataUrl ? <img src={company.logoDataUrl} alt="" style={{ width: 32, height: 32, borderRadius: 10, objectFit: 'cover' }} /> : <Logo small />}
-        <span className="t-body" style={{ fontWeight: 500 }}>
-          {company.name}
-        </span>
-      </header>
+      <BrandHeader company={company} />
 
-      <main style={{ padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <main className="c-main">
         {!ins || !lead ? (
-          <EmptyState title="This link is not valid">Please contact {company.name} on {company.phone}.</EmptyState>
+          <div className="card">
+            <EmptyState title="This link is not valid">Please contact {company.name} on {company.phone}.</EmptyState>
+          </div>
         ) : (
           <>
-            <div className="stack" style={{ padding: '0 4px', gap: 8 }}>
+            <div className="p-intro">
               <span className="t-small muted">
                 {lead.name} · installed {fmtDate(ins.installedAt)}
               </span>
@@ -49,13 +47,15 @@ export function ReportFault() {
             </div>
 
             {sent ? (
-              <section className="card card--pad stack" style={{ gap: 8 }} role="status">
-                <Icon name="checkCircle" size={32} color="var(--success)" />
-                <span className="t-title">We've got it</span>
-                <span className="t-body muted">
-                  Your ticket number is <strong style={{ color: 'var(--text)' }}>{sent}</strong>. We'll send updates on WhatsApp. For anything urgent, call {company.phone}.
+              <section className="c-ok" role="status">
+                <span className="t-title c-ok__title">
+                  <Icon name="checkCircle" size={24} />
+                  We've got it
                 </span>
-                <Button variant="text" onClick={() => setSent(null)}>
+                <span className="t-body">
+                  Your ticket number is <strong>{sent}</strong>. We'll send updates on WhatsApp. For anything urgent, call {company.phone}.
+                </span>
+                <Button variant="tonal" size="lg" onClick={() => setSent(null)}>
                   Report another problem
                 </Button>
               </section>
@@ -92,8 +92,11 @@ export function ReportFault() {
               >
                 <TextArea id="fault" label="What's happening?" value={text} onChange={setText} rows={4} placeholder="e.g. No power from the inverter since this morning" />
                 <div className="stack" style={{ gap: 8 }}>
-                  <span className="t-small muted">Photos (optional) · the inverter screen or any error helps</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+                  <span className="t-small">
+                    <span className="strong">Photos (optional)</span>
+                    <span className="muted"> · the inverter screen or any error helps</span>
+                  </span>
+                  <div className="p-grid-3">
                     {photos.map((p, i) => (
                       <PhotoThumb key={p.id} photo={p} label={`Photo ${i + 1}`} onRemove={() => setPhotos(photos.filter((x) => x.id !== p.id))} />
                     ))}
@@ -113,8 +116,8 @@ export function ReportFault() {
             )}
 
             {tickets.length > 0 && (
-              <section aria-labelledby="mine" className="stack" style={{ gap: 8 }}>
-                <h2 id="mine" className="t-section" style={{ padding: '0 4px' }}>
+              <section aria-labelledby="mine" className="p-section">
+                <h2 id="mine" className="t-section-lg p-section__head">
                   Your reports
                 </h2>
                 {tickets.map((t) => (
@@ -126,12 +129,12 @@ export function ReportFault() {
                       <Badge tone={t.status === 'Open' ? 'amber' : t.status === 'Scheduled' ? 'blue' : 'green'}>{t.status === 'Open' ? 'Received' : t.status}</Badge>
                     </div>
                     <span className="t-body">{t.description}</span>
-                    <ol className="stack" style={{ margin: 0, padding: 0, listStyle: 'none', gap: 8 }}>
+                    <ol className="timeline">
                       {t.updates.map((u, i) => (
-                        <li key={i} style={{ display: 'flex', gap: 12 }}>
-                          <span className="dot" aria-hidden="true" style={{ marginTop: 6, background: i === t.updates.length - 1 ? 'var(--primary)' : 'var(--faint)' }} />
+                        <li key={i}>
+                          <span className="dot" aria-hidden="true" />
                           <span className="stack" style={{ gap: 2 }}>
-                            <span style={{ fontSize: 14, lineHeight: '20px' }}>{u.text}</span>
+                            <span className="t-small">{u.text}</span>
                             <span className="t-small muted">{fmtDateTime(u.at)}</span>
                           </span>
                         </li>

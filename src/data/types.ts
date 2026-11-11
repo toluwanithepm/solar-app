@@ -12,6 +12,8 @@ export type User = {
   role: Role;
   title: string;
   active: boolean;
+  /** Set when the owner signed this person out of all phones (backend only) */
+  signedOutAt?: string;
 };
 
 export type Company = {

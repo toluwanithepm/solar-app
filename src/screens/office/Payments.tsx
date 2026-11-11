@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Dialog, SelectField, TextField } from '../../components/forms';
+import '../../styles/office-ops.css';
+import { Dialog, MoneyField, SelectField } from '../../components/forms';
 import { useCan } from '../../components/Guards';
-import { Icon } from '../../components/Icon';
+import { Icon, type IconName } from '../../components/Icon';
 import { OfficeShell } from '../../components/OfficeShell';
 import { PhotoInput, PhotoThumb } from '../../components/PhotoInput';
-import { Badge, Button, EmptyState, PageHeader, Segmented, Stat } from '../../components/ui';
+import { Badge, Button, EmptyState, PageHeader, Segmented } from '../../components/ui';
 import { fmtDate, fmtDateTime, invoiceBalance, invoicePaid, invoiceStatus, naira, nairaShort, whatsappLink } from '../../data/domain';
 import { recordOfflinePayment, reviewPayment } from '../../data/salesActions';
 import { useShareLink } from '../../data/remote/shareLinks';
@@ -15,7 +16,10 @@ import type { Invoice, Lead, Photo } from '../../data/types';
 type Status = ReturnType<typeof invoiceStatus>;
 type Filter = 'Open' | Status | 'All';
 
-export const invoiceTone = (s: Status) => ({ Paid: 'green', 'Part paid': 'amber', Overdue: 'red', Due: 'blue', 'Pending approval': 'amber' })[s] as 'green' | 'amber' | 'red' | 'blue';
+/** Paid green, overdue red; anything still waiting on money (due, part paid, awaiting approval) reads as amber. */
+export const invoiceTone = (s: Status) => ({ Paid: 'green', 'Part paid': 'amber', Overdue: 'red', Due: 'amber', 'Pending approval': 'amber' })[s] as 'green' | 'amber' | 'red' | 'blue';
+/** Distinct icons so the amber states can still be told apart without colour. */
+const invoiceIcons: Record<Status, IconName | undefined> = { Paid: undefined, 'Part paid': 'money', Overdue: undefined, Due: 'calendar', 'Pending approval': 'clock' };
 const reminderLabel = (step: number) => (step === 0 ? 'due date' : `+${step} days`);
 
 export function Payments() {
@@ -44,45 +48,69 @@ export function Payments() {
     <OfficeShell>
       <PageHeader title="Payments" subtitle="Deposits, balances and instalments from accepted quotes" />
 
-      <div className="grid-auto">
-        <div className="card" style={{ padding: 24 }}>
-          <Stat label="Collected this month" value={nairaShort(collected)} size={28} />
-          <span className="t-small muted">{collected ? Math.round((viaLinks / collected) * 100) : 0}% through payment links</span>
+      <div className="kpi-grid">
+        <div className="card kpi">
+          <span className="kpi__label">Collected this month</span>
+          <span className="kpi__value num">
+            {nairaShort(collected)}
+          </span>
+          <span className="t-caption faint">{collected ? Math.round((viaLinks / collected) * 100) : 0}% through payment links</span>
         </div>
-        <div className="card" style={{ padding: 24 }}>
-          <Stat label="Owed by customers" value={nairaShort(owed)} size={28} />
+        <div className="card kpi">
+          <span className="kpi__label">Owed by customers</span>
+          <span className="kpi__value num">
+            {nairaShort(owed)}
+          </span>
         </div>
-        <div className="card" style={{ padding: 24 }}>
-          <Stat label="Overdue" value={<span style={{ color: overdue ? 'var(--danger)' : undefined }}>{nairaShort(overdue)}</span>} size={28} />
+        <div className="card kpi">
+          <span className="kpi__label">Overdue</span>
+          <span className={`kpi__value num${overdue ? ' kpi__value--danger' : ''}`}>
+            {nairaShort(overdue)}
+          </span>
         </div>
-        <div className="card" style={{ padding: 24 }}>
-          <Stat label="Waiting for approval" value={pending.length} size={28} />
+        <div className="card kpi">
+          <span className="kpi__label">Waiting for approval</span>
+          <span className="kpi__value num">
+            {pending.length}
+          </span>
+          {pending.length > 0 && <span className="t-caption faint">Cash and bank payments to check</span>}
         </div>
       </div>
 
       {pending.length > 0 && (
-        <section aria-labelledby="approve" className="card stack" style={{ padding: '20px 24px 8px' }}>
-          <h2 id="approve" className="t-section-lg">
-            Cash and bank payments to approve
-          </h2>
-          <span className="t-small muted" style={{ marginBottom: 4 }}>
-            Recorded outside the app. {canApprove ? 'Check the proof, then approve to update the balance.' : 'The owner approves these.'}
-          </span>
+        <section aria-labelledby="approve" className="card">
+          <div className="card__head">
+            <div className="stack" style={{ gap: 2 }}>
+              <h2 id="approve" className="t-section">
+                Cash and bank payments to approve
+              </h2>
+              <span className="t-small muted">Recorded outside the app. {canApprove ? 'Check the proof, then approve to update the balance.' : 'The owner approves these.'}</span>
+            </div>
+            <Badge tone="amber">{pending.length} waiting</Badge>
+          </div>
+          <div className="ops-card__body">
           {pending.map((p) => {
             const inv = db.invoices.find((i) => i.id === p.invoiceId)!;
             const lead = db.leads.find((l) => l.id === inv.leadId);
             const by = db.users.find((u) => u.id === p.recordedById);
             return (
               <div key={p.id} className="row" style={{ flexWrap: 'wrap', gap: 16 }}>
-                {p.proofPhoto ? <PhotoThumb photo={p.proofPhoto} label="Payment proof" style={{ width: 64, height: 64, borderRadius: 12, flexShrink: 0 }} /> : <span className="t-small muted">No proof</span>}
+                {p.proofPhoto ? (
+                  <PhotoThumb photo={p.proofPhoto} label="Payment proof" style={{ width: 56, height: 56, borderRadius: 'var(--radius)', flexShrink: 0 }} />
+                ) : (
+                  <span className="t-caption faint" style={{ width: 56, flexShrink: 0, textAlign: 'center' }}>
+                    No proof
+                  </span>
+                )}
                 <span className="row__main" style={{ minWidth: 220 }}>
                   <span>
-                    {naira(p.amount)} {p.method.toLowerCase()} · {lead?.name}
+                    <span className="strong num">{naira(p.amount)}</span> {p.method.toLowerCase()} · {lead?.name}
                   </span>
                   <span className="t-small muted">
                     {inv.number} · {inv.description} · recorded by {by?.name ?? 'staff'}, {fmtDateTime(p.at)}
                   </span>
                 </span>
+                <Badge tone="amber">Awaiting approval</Badge>
                 {canApprove && (
                   <span style={{ display: 'flex', gap: 8 }}>
                     <Button variant="text" size="sm" onClick={() => reviewPayment(p.id, false)}>
@@ -96,10 +124,11 @@ export function Payments() {
               </div>
             );
           })}
+          </div>
         </section>
       )}
 
-      <div style={{ overflowX: 'auto' }}>
+      <div className="ops-filters__scroll">
         <Segmented
           label="Filter invoices"
           value={filter}
@@ -108,16 +137,15 @@ export function Payments() {
         />
       </div>
 
-      <section className="card table-scroll" aria-label="Invoices">
+      <section className="card" aria-label="Invoices">
         {shown.length === 0 ? (
-          <EmptyState title="No invoices here" />
+          <EmptyState title="No invoices here">{filter === 'Open' ? 'Every invoice is paid. New invoices are raised when a customer accepts a quote.' : 'Try another filter.'}</EmptyState>
         ) : (
+          <div className="table-scroll">
           <table className="table" style={{ minWidth: 980 }}>
             <thead>
               <tr>
-                <th scope="col" style={{ paddingTop: 16 }}>
-                  Invoice
-                </th>
+                <th scope="col">Invoice</th>
                 <th scope="col">Customer</th>
                 <th scope="col">Milestone</th>
                 <th scope="col" className="num">
@@ -129,7 +157,9 @@ export function Payments() {
                 <th scope="col">Due</th>
                 <th scope="col">Status</th>
                 <th scope="col">Reminders sent</th>
-                <th scope="col">Actions</th>
+                <th scope="col" className="num">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -137,8 +167,10 @@ export function Payments() {
                 const bal = invoiceBalance(db, inv);
                 return (
                   <tr key={inv.id}>
-                    <td style={{ fontWeight: 500 }}>{inv.number}</td>
-                    <td>{lead ? <Link to={`/office/leads/${lead.id}`}>{lead.name}</Link> : '—'}</td>
+                    <td className="strong num" style={{ whiteSpace: 'nowrap' }}>
+                      {inv.number}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{lead ? <Link to={`/office/leads/${lead.id}`}>{lead.name}</Link> : '—'}</td>
                     <td>
                       <span className="stack" style={{ gap: 2 }}>
                         <span>{inv.kind}</span>
@@ -146,18 +178,26 @@ export function Payments() {
                       </span>
                     </td>
                     <td className="num">{naira(inv.amount)}</td>
-                    <td className="num" style={{ color: bal ? 'var(--text)' : 'var(--muted)' }}>
+                    <td className={`num${bal ? ' strong' : ' muted'}`}>
                       {naira(bal)}
-                      {bal > 0 && invoicePaid(db, inv.id) > 0 && <div className="t-small muted">{naira(invoicePaid(db, inv.id))} paid</div>}
+                      {bal > 0 && invoicePaid(db, inv.id) > 0 && (
+                        <div className="t-caption faint" style={{ fontWeight: 400 }}>
+                          {naira(invoicePaid(db, inv.id))} paid
+                        </div>
+                      )}
                     </td>
-                    <td className="muted">{fmtDate(inv.dueAt)}</td>
+                    <td className={status === 'Overdue' ? 'danger' : 'muted'} style={{ whiteSpace: 'nowrap' }}>
+                      {fmtDate(inv.dueAt)}
+                    </td>
                     <td>
-                      <Badge tone={invoiceTone(status)}>{status}</Badge>
+                      <Badge tone={invoiceTone(status)} icon={invoiceIcons[status]}>
+                        {status === 'Pending approval' ? 'Awaiting approval' : status}
+                      </Badge>
                     </td>
                     <td className="t-small muted">{inv.remindersSent.length ? [...inv.remindersSent].sort((a, b) => a - b).map(reminderLabel).join(', ') : '—'}</td>
                     <td>
                       {bal > 0 && (
-                        <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        <span className="ops-actions">
                           <PayLinkButtons inv={inv} lead={lead} balance={bal} copied={copied === inv.id} onCopied={() => setCopied(inv.id)} />
                           {canRecord && (
                             <Button variant="text" size="sm" onClick={() => setRecording(inv)}>
@@ -172,9 +212,10 @@ export function Payments() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </section>
-      <span className="t-small muted">Unpaid balances get WhatsApp and SMS reminders automatically on the due date, then 3 and 7 days after.</span>
+      <span className="t-small faint">Unpaid balances get WhatsApp and SMS reminders automatically on the due date, then 3 and 7 days after.</span>
 
       {recording && <RecordPaymentDialog invoice={recording} onClose={() => setRecording(null)} />}
     </OfficeShell>
@@ -185,10 +226,10 @@ export function Payments() {
 function RecordPaymentDialog({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
   const payments = useDb((d) => d.payments);
   const balance = invoiceBalance({ payments }, invoice);
-  const [amount, setAmount] = useState(String(balance));
+  const [amount, setAmount] = useState<number>(balance);
   const [method, setMethod] = useState<'Cash' | 'Bank transfer (outside app)'>('Cash');
   const [proof, setProof] = useState<Photo>();
-  const value = Math.round(+amount);
+  const value = Math.round(amount);
   const valid = value > 0 && value <= balance && !!proof;
 
   return (
@@ -216,10 +257,10 @@ function RecordPaymentDialog({ invoice, onClose }: { invoice: Invoice; onClose: 
       <span className="t-small muted">
         {invoice.description} · {naira(balance)} outstanding
       </span>
-      <TextField id="pay-amt" label="Amount (₦)" type="number" inputMode="numeric" min={1} value={amount} onChange={setAmount} hint={value > balance ? 'More than the balance' : undefined} />
+      <MoneyField id="pay-amt" label="Amount" value={amount} onChange={setAmount} required hint={value > balance ? 'More than the balance' : undefined} />
       <SelectField id="pay-method" label="Paid by" value={method} onChange={setMethod} options={['Cash', 'Bank transfer (outside app)'] as const} />
       <div className="stack" style={{ gap: 6 }}>
-        <span className="t-small muted">Proof (receipt, transfer slip or teller)</span>
+        <span className="t-small strong">Proof (receipt, transfer slip or teller)</span>
         <div style={{ width: 120 }}>{proof ? <PhotoThumb photo={proof} label="Payment proof" onRemove={() => setProof(undefined)} /> : <PhotoInput kind="proof" label="Add photo" onPhoto={setProof} />}</div>
       </div>
     </Dialog>
@@ -237,13 +278,12 @@ function PayLinkButtons({ inv, lead, balance, copied, onCopied }: { inv: Invoice
         aria-label={`Copy payment link for ${inv.number}`}
         title="Copy payment link"
         disabled={!link}
-        style={{ width: 40, height: 40, color: 'var(--primary)' }}
         onClick={() => {
           navigator.clipboard?.writeText(link);
           onCopied();
         }}
       >
-        <Icon name={copied ? 'check' : 'receipt'} size={20} />
+        <Icon name={copied ? 'check' : 'receipt'} size={18} />
       </button>
       {lead && link && (
         <a
@@ -253,9 +293,8 @@ function PayLinkButtons({ inv, lead, balance, copied, onCopied }: { inv: Invoice
           className="icon-btn"
           aria-label={`Send payment link for ${inv.number} on WhatsApp`}
           title="Send on WhatsApp"
-          style={{ width: 40, height: 40, color: 'var(--primary)' }}
         >
-          <Icon name="whatsapp" size={20} />
+          <Icon name="whatsapp" size={18} />
         </a>
       )}
     </>

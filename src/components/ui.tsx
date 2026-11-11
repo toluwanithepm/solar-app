@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon, type IconName } from './Icon';
 
-type ButtonVariant = 'primary' | 'tonal' | 'text';
+type ButtonVariant = 'primary' | 'tonal' | 'danger' | 'text';
 type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 
 type ButtonProps = {

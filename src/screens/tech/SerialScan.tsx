@@ -3,21 +3,19 @@ import { useParams } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { Dialog, TextField } from '../../components/forms';
 import { AppBar, PhoneScreen } from '../../components/PhoneScreen';
-import { Button } from '../../components/ui';
+import { Badge, Button, ProgressBar } from '../../components/ui';
 import { removeSerial, saveSerial, serialSlots, type SerialSlot } from '../../data/techActions';
 import type { ItemCategory } from '../../data/types';
 import { JobNotFound, useJob } from './parts';
+import { createDetector } from '../../data/barcode';
 
-// The Barcode Detection API is not in TypeScript's DOM lib yet.
-type DetectedBarcode = { rawValue: string };
-type BarcodeDetectorLike = { detect: (src: CanvasImageSource) => Promise<DetectedBarcode[]> };
-declare global {
-  interface Window {
-    BarcodeDetector?: new (opts?: { formats?: string[] }) => BarcodeDetectorLike;
-  }
-}
 
-const corner = (pos: CSSProperties): CSSProperties => ({ position: 'absolute', width: 24, height: 24, borderColor: '#fff', borderStyle: 'solid', borderWidth: 0, ...pos });
+const corners: CSSProperties[] = [
+  { left: 0, top: 0, borderLeftWidth: 4, borderTopWidth: 4, borderTopLeftRadius: 12 },
+  { right: 0, top: 0, borderRightWidth: 4, borderTopWidth: 4, borderTopRightRadius: 12 },
+  { left: 0, bottom: 0, borderLeftWidth: 4, borderBottomWidth: 4, borderBottomLeftRadius: 12 },
+  { right: 0, bottom: 0, borderRightWidth: 4, borderBottomWidth: 4, borderBottomRightRadius: 12 },
+];
 
 type CameraState = 'starting' | 'scanning' | 'unsupported' | 'denied';
 
@@ -45,18 +43,22 @@ export function SerialScan() {
   latest.current = { target, job };
 
   useEffect(() => {
-    if (!window.BarcodeDetector || !navigator.mediaDevices?.getUserMedia) {
+    if (!navigator.mediaDevices?.getUserMedia) {
       setCamera('unsupported');
       return;
     }
     let stream: MediaStream | undefined;
     let timer: number | undefined;
     let stopped = false;
-    const detector = new window.BarcodeDetector({ formats: ['code_128', 'code_39', 'qr_code', 'ean_13', 'data_matrix'] });
 
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment' }, audio: false })
-      .then(async (s) => {
+    createDetector()
+      .then((detector) => {
+        if (!detector) throw new Error('unsupported');
+        return navigator.mediaDevices
+          .getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+          .then((s) => ({ s, detector }));
+      })
+      .then(async ({ s, detector }) => {
         if (stopped) return s.getTracks().forEach((t) => t.stop());
         stream = s;
         const video = videoRef.current!;
@@ -83,7 +85,7 @@ export function SerialScan() {
         };
         tick();
       })
-      .catch(() => setCamera('denied'));
+      .catch((e: Error) => setCamera(e?.message === 'unsupported' ? 'unsupported' : 'denied'));
 
     return () => {
       stopped = true;
@@ -107,12 +109,11 @@ export function SerialScan() {
 
   return (
     <PhoneScreen style={{ background: 'var(--scanner-bg)' }}>
-      <div style={{ height: 340, flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+      <div className="scanner">
         <video ref={videoRef} muted playsInline aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: camera === 'scanning' ? 0.85 : 0 }} />
         <div style={{ position: 'absolute', left: 0, right: 0, top: 0 }}>
           <AppBar
             title="Scan serial numbers"
-            color="#fff"
             leading={{ to: `/tech/jobs/${job.id}/work`, icon: 'close', label: 'Close scanner' }}
             trailing={
               torch ? (
@@ -121,7 +122,6 @@ export function SerialScan() {
                   aria-label={torch.on ? 'Turn off flashlight' : 'Turn on flashlight'}
                   aria-pressed={torch.on}
                   className="icon-btn"
-                  style={{ color: '#fff' }}
                   onClick={async () => {
                     await torch.track.applyConstraints({ advanced: [{ torch: !torch.on } as MediaTrackConstraintSet] });
                     setTorch({ ...torch, on: !torch.on });
@@ -133,24 +133,26 @@ export function SerialScan() {
             }
           />
         </div>
-        <div aria-hidden="true" style={{ position: 'absolute', left: '50%', marginLeft: -130, top: 104, width: 260, height: 130 }}>
-          <div style={corner({ left: 0, top: 0, borderLeftWidth: 3, borderTopWidth: 3, borderTopLeftRadius: 12 })} />
-          <div style={corner({ right: 0, top: 0, borderRightWidth: 3, borderTopWidth: 3, borderTopRightRadius: 12 })} />
-          <div style={corner({ left: 0, bottom: 0, borderLeftWidth: 3, borderBottomWidth: 3, borderBottomLeftRadius: 12 })} />
-          <div style={corner({ right: 0, bottom: 0, borderRightWidth: 3, borderBottomWidth: 3, borderBottomRightRadius: 12 })} />
+        <div aria-hidden="true" className="scanner__frame">
+          {corners.map((c, i) => (
+            <div key={i} className="scanner__corner" style={c} />
+          ))}
         </div>
-        <p aria-live="polite" style={{ position: 'absolute', left: 32, right: 32, top: 256, margin: 0, textAlign: 'center', color: 'var(--scanner-text)', fontSize: 14, lineHeight: '20px' }}>
+        <p aria-live="polite" className={`scanner__msg${flash ? ' scanner__msg--saved' : ''}`}>
           {flash ? `Saved ${flash}` : cameraMessage}
         </p>
       </div>
 
-      <div style={{ flexGrow: 1, minHeight: 0, background: 'var(--surface)', borderRadius: '28px 28px 0 0', display: 'flex', flexDirection: 'column', padding: '12px 20px 24px' }}>
-        <div aria-hidden="true" style={{ width: 32, height: 4, borderRadius: 2, background: 'var(--scanner-text)', alignSelf: 'center' }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '20px 0 8px' }}>
-          <h1 className="t-title">Equipment</h1>
-          <span className="t-small muted">
-            {scannedCount} of {allSlots.length} scanned
-          </span>
+      <div className="sheet">
+        <div aria-hidden="true" className="sheet__grip" />
+        <div className="stack" style={{ gap: 8, padding: '14px 0 8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <h1 className="t-title">Equipment</h1>
+            <Badge tone={allSlots.length > 0 && scannedCount === allSlots.length ? 'green' : 'neutral'} icon={false}>
+              {scannedCount} of {allSlots.length} scanned
+            </Badge>
+          </div>
+          <ProgressBar value={allSlots.length ? Math.round((scannedCount / allSlots.length) * 100) : 0} label="Serials scanned" />
         </div>
 
         <div style={{ overflowY: 'auto', minHeight: 0, flexGrow: 1 }}>
@@ -159,13 +161,22 @@ export function SerialScan() {
             const rec = serialFor(s.label);
             const active = !rec && target?.key === s.key;
             return (
-              <div key={s.key} className="row" style={{ gap: 12 }}>
-                <Icon name={rec ? 'checkCircle' : 'circle'} color={rec ? 'var(--primary)' : 'var(--faint)'} />
-                <button type="button" className="row__main" onClick={() => (rec ? setManual(s) : setActiveKey(s.key))} style={{ background: 'none', border: 0, padding: 0, textAlign: 'left' }} aria-label={rec ? `Edit ${s.label} serial` : `Scan ${s.label} next`}>
-                  <span>{s.label}</span>
-                  <span className="t-small" style={active ? { color: 'var(--primary)', fontWeight: 500 } : { color: 'var(--muted)' }}>
-                    {rec ? `${rec.serial}${rec.method === 'manual' ? ' · typed' : ''}` : active ? (camera === 'scanning' ? 'Scanning…' : 'Next to enter') : s.detail}
-                  </span>
+              <div key={s.key} className={`serial-row${active ? ' serial-row--active' : ''}`}>
+                <Icon name={rec ? 'checkCircle' : active ? 'circleDot' : 'circle'} size={24} color={rec ? 'var(--success)' : active ? 'var(--primary)' : 'var(--faint)'} />
+                <button type="button" className="serial-row__main" onClick={() => (rec ? setManual(s) : setActiveKey(s.key))} aria-label={rec ? `Edit ${s.label} serial` : `Scan ${s.label} next`}>
+                  <span style={{ fontWeight: 500 }}>{s.label}</span>
+                  {rec ? (
+                    <span className="t-small muted">
+                      <span className="serial-code" style={{ color: 'var(--text)' }}>
+                        {rec.serial}
+                      </span>
+                      {rec.method === 'manual' ? ' · typed' : ' · scanned'}
+                    </span>
+                  ) : (
+                    <span className="t-small" style={active ? { color: 'var(--on-primary-tint)', fontWeight: 600 } : { color: 'var(--muted)' }}>
+                      {active ? (camera === 'scanning' ? 'Scanning now…' : 'Next to enter') : s.detail}
+                    </span>
+                  )}
                 </button>
                 {rec && (
                   <button type="button" className="icon-btn" aria-label={`Clear ${s.label} serial`} onClick={() => removeSerial(job.id, rec.id)}>
@@ -175,13 +186,13 @@ export function SerialScan() {
               </div>
             );
           })}
-          <button type="button" className="btn btn--text" style={{ height: 44, marginTop: 4 }} onClick={() => setManual({ key: 'new', label: '', detail: '', category: 'accessory' })}>
-            <Icon name="add" size={18} />
+          <button type="button" className="btn btn--text btn--lg" style={{ marginTop: 4 }} onClick={() => setManual({ key: 'new', label: '', detail: '', category: 'accessory' })}>
+            <Icon name="add" size={20} />
             Add another part
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, paddingTop: 16 }}>
+        <div className="phone__footer" style={{ margin: '0 -16px' }}>
           <Button variant="tonal" size="xl" block disabled={!target} onClick={() => target && setManual(target)}>
             Type it in
           </Button>

@@ -446,6 +446,9 @@
   color: var(--on-primary-tint);
   font-weight: 600;
   font-size: 12px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
 }
 .landing__h1 {
   font-size: 48px;

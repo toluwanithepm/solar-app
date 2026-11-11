@@ -49,6 +49,9 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l);
 }
 
+/** Run fn after every change to the data (outside React). Returns an unsubscribe function. */
+export const onDbChange = subscribe;
+
 export function getDb(): DB {
   return db;
 }

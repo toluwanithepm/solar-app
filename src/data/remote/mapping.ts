@@ -187,6 +187,7 @@ export function fromRemote(raw: RawTables, ctx: Ctx, fileUrl: (bucket: string, p
     role: r.role as Role,
     title: String(r.title ?? ''),
     active: Boolean(r.active),
+    signedOutAt: s(r.signed_out_at),
   }));
 
   const priceItems: PriceItem[] = t('price_items').map((r) => ({

@@ -348,3 +348,9 @@ async function push(): Promise<void> {
   // Pick up numbers, defaults and what the server did; a refused unit is replaced by the server's copy
   scheduleReload(refused.length > 0);
 }
+
+/** Owner: end every sign-in this staff member has and make their phones wipe the data kept on them (NFR-11). */
+export async function signOutStaffEverywhere(staffId: string): Promise<{ error?: string }> {
+  const { error } = await supabase().rpc('sign_out_staff', { p_staff: staffId });
+  return error ? { error: friendlyError(error.message) } : {};
+}

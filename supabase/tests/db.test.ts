@@ -349,3 +349,43 @@ describe('server reminders (E8-1, E8-2, E9-3)', () => {
     });
   });
 });
+
+describe('remote wipe: sign a staff member out of all phones (NFR-11)', () => {
+  test('owner ends their sessions and stamps the staff row; a later sign-in still works', async () => {
+    const musa = await one<{ id: string }>('select id from staff where phone = $1', [TECH]);
+    const userId = crypto.randomUUID();
+    await db.query('insert into auth.users (id, phone) values ($1, $2)', [userId, TECH.replace('+', '')]);
+    await db.query('insert into auth.sessions (user_id) values ($1), ($1)', [userId]);
+
+    await as(await claimsFor(OWNER), async () => {
+      await db.query('select public.sign_out_staff($1)', [musa.id]);
+    });
+    assert.equal(await count('select * from auth.sessions where user_id = $1', [userId]), 0, 'sessions ended, so refresh tokens stop working');
+    const row = await one<{ signed_out_at: string | null }>('select signed_out_at from staff where id = $1', [musa.id]);
+    assert.notEqual(row.signed_out_at, null);
+    assert.equal((await claimsFor(TECH, userId)).app_role, 'technician', 'signing in again with a new code is allowed');
+  });
+
+  test('only the owner can do it, not on themselves, and nobody can edit the stamp directly', async () => {
+    const musa = await one<{ id: string }>('select id from staff where phone = $1', [TECH]);
+    for (const phone of [OFFICE, TECH, VIEWER]) {
+      await as(await claimsFor(phone), async () => {
+        await assert.rejects(db.query('select public.sign_out_staff($1)', [musa.id]), /only the owner/);
+      });
+    }
+    const owner = await claimsFor(OWNER);
+    await as(owner, async () => {
+      await assert.rejects(db.query('select public.sign_out_staff($1)', [owner.staff_id]), /sign yourself out/);
+      const ops = [{ t: 'staff', op: 'update', key: { id: musa.id }, set: { signed_out_at: null } }];
+      await assert.rejects(db.query('select public.apply_changes($1)', [JSON.stringify(ops)]), /sign out of all phones/);
+    });
+  });
+
+  test('cannot reach staff in another firm', async () => {
+    const other = await one<{ id: string }>('select id from staff where firm_id <> (select firm_id from staff where phone = $1) limit 1', [OWNER]);
+    if (!other) return;
+    await as(await claimsFor(OWNER), async () => {
+      await assert.rejects(db.query('select public.sign_out_staff($1)', [other.id]), /no such staff member/);
+    });
+  });
+});

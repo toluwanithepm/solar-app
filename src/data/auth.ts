@@ -2,14 +2,15 @@
 // backend mode uses Supabase phone OTP, and the login token carries the firm and role (supabase/migrations/*_auth.sql).
 import { createEmpty } from './seed';
 import { findUserByPhone, sendOtp, signUpFirm } from './salesActions';
-import { isBackend, isOnline, replaceDb, setSession, update } from './store';
+import { getDb, isBackend, isOnline, onConnectivityChange, onDbChange, replaceDb, setSession, update } from './store';
 import type { DB, Role } from './types';
 import { toE164 } from './remote/mapping';
 import type { Ctx } from './remote/mapping';
 import { startSync, stopSync, supabase, wipeDeviceData } from './remote/sync';
+import { keepScannerOffline } from './barcode';
 
 export type AuthMode = 'signin' | 'signup';
-type Claims = { sub?: string; firm_id?: string; staff_id?: string; app_role?: Role };
+type Claims = { sub?: string; firm_id?: string; staff_id?: string; app_role?: Role; amr?: { method: string; timestamp: number }[] };
 
 const NOT_STAFF = 'No staff account uses this number. Ask your company owner to add you, or start a free trial.';
 
@@ -28,11 +29,19 @@ function savedCtx(): Ctx | null {
   }
 }
 
+// When this device signed in, by the server's clock (the token's sign-in method timestamp)
+const SIGNED_IN_AT_KEY = 'solar-app:signed-in-at';
+const signedInAtOf = (c: Claims) => Math.max(0, ...(c.amr ?? []).map((m) => m.timestamp)) * 1000;
+
 async function enter(c: Claims): Promise<Role> {
   const ctx: Ctx = { firmId: c.firm_id!, staffId: c.staff_id!, role: c.app_role! };
   localStorage.setItem(CTX_KEY, JSON.stringify(ctx));
+  const at = signedInAtOf(c);
+  if (at) localStorage.setItem(SIGNED_IN_AT_KEY, String(at));
   await startSync(ctx);
   setSession({ userId: ctx.staffId });
+  watchRemoteSignOut();
+  if (ctx.role === 'technician') keepScannerOffline();
   return ctx.role;
 }
 
@@ -40,9 +49,83 @@ async function enter(c: Claims): Promise<Role> {
 async function leave() {
   setSession(null);
   localStorage.removeItem(CTX_KEY);
+  localStorage.removeItem(SIGNED_IN_AT_KEY);
   await stopSync();
   await wipeDeviceData();
   replaceDb(createEmpty());
+}
+
+/**
+ * NFR-11 remote wipe: the owner pressed "Sign out of all phones" for this person after this device signed in.
+ * The server has already ended their sign-ins. Phones find out three ways, whichever comes first:
+ *   - live update of their staff row (online at the time),
+ *   - a check with the server on start, on reconnecting, on coming back to the app, and every 2 minutes,
+ *   - their sign-in failing to renew (at the latest within the hour).
+ * A sign-in made after the wipe (e.g. on a new phone) is not affected.
+ */
+const signedInAtMs = () => Number(localStorage.getItem(SIGNED_IN_AT_KEY) ?? 0);
+const wipedAfterSignIn = (signedOutAt: string | null | undefined) => {
+  const at = signedInAtMs();
+  return Boolean(signedOutAt && at && new Date(signedOutAt).getTime() > at);
+};
+
+let wiping = false;
+async function remoteWipe() {
+  if (wiping) return;
+  wiping = true;
+  try {
+    await leave();
+    await supabase()
+      .auth.signOut({ scope: 'local' })
+      .catch(() => undefined);
+  } finally {
+    wiping = false;
+  }
+}
+
+let lastCheck = 0;
+/** Ask the server whether this device's sign-in still stands. Network trouble never wipes the phone; only a clear "no" does. */
+async function checkStillSignedIn(force = false) {
+  const ctx = savedCtx();
+  if (!isBackend || !ctx || !isOnline() || wiping) return;
+  if (!force && Date.now() - lastCheck < 20_000) return;
+  lastCheck = Date.now();
+  const sb = supabase();
+
+  const { data: s } = await sb.auth.getSession().catch(() => ({ data: { session: null } }));
+  if (s.session) {
+    const at = signedInAtOf(claimsOf(s.session.access_token));
+    if (at) localStorage.setItem(SIGNED_IN_AT_KEY, String(at));
+  }
+
+  // 1. The sign-in server refuses a session that was ended
+  const { error } = await sb.auth.getUser();
+  if (error) {
+    const status = (error as { status?: number }).status ?? 0;
+    if (status === 401 || status === 403) await remoteWipe();
+    return;
+  }
+  // 2. The staff row says so (the old sign-in can stay valid for up to an hour)
+  const { data, error: e2 } = await sb.from('staff').select('signed_out_at').eq('id', ctx.staffId).maybeSingle();
+  if (!e2 && data && wipedAfterSignIn(data.signed_out_at as string | null)) await remoteWipe();
+}
+
+let watching = false;
+function watchRemoteSignOut() {
+  if (watching) return;
+  watching = true;
+  onDbChange(() => {
+    const ctx = savedCtx();
+    if (!ctx || wiping) return;
+    const me = getDb().users.find((u) => u.id === ctx.staffId);
+    if (wipedAfterSignIn(me?.signedOutAt)) void remoteWipe();
+  });
+  onConnectivityChange(() => void checkStillSignedIn(true));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') void checkStillSignedIn();
+  });
+  window.setInterval(() => void checkStillSignedIn(), 2 * 60_000);
+  void checkStillSignedIn(true);
 }
 
 /** Send a sign-in code. In demo mode the code comes back to show on screen. */
@@ -134,6 +217,8 @@ async function resume() {
     // No connection to refresh the sign-in: open from the copy kept on this device
     await startSync(saved);
     setSession({ userId: saved.staffId });
+    watchRemoteSignOut();
+    if (saved.role === 'technician') keepScannerOffline();
   } else {
     // Signed out, or the server no longer recognises this user: nothing stays on the device
     await leave();

@@ -1,17 +1,27 @@
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import '../../styles/office-ops.css';
 import { IfCan, useCan } from '../../components/Guards';
 import { Icon } from '../../components/Icon';
 import { OfficeShell } from '../../components/OfficeShell';
 import { PhotoThumb } from '../../components/PhotoInput';
-import { Badge, Button, EmptyState, PageHeader, StatusDot } from '../../components/ui';
+import { Badge, Button, EmptyState, PageHeader, type Tone } from '../../components/ui';
 import { fmtDate, fmtDateTime, fmtTime, mapsLink, naira } from '../../data/domain';
-import { invoiceExtras, lateByLabel, liveStatus, liveStatusColor } from '../../data/opsActions';
+import { invoiceExtras, lateByLabel, liveStatus, type LiveStatus } from '../../data/opsActions';
 import { resolveSyncConflict } from '../../data/settingsActions';
 import { useShareLink } from '../../data/remote/shareLinks';
 import { useDb } from '../../data/store';
 import type { Invoice } from '../../data/types';
 import { formatGps } from '../../lib/photos';
+
+const statusTone: Record<LiveStatus, Tone> = {
+  Unscheduled: 'amber',
+  Scheduled: 'blue',
+  'On site': 'blue',
+  Late: 'red',
+  Done: 'green',
+  Cancelled: 'neutral',
+};
 
 export function OfficeJob() {
   const { jobId } = useParams();
@@ -56,9 +66,9 @@ export function OfficeJob() {
       />
 
       {job.syncConflict && (
-        <div role="alert" className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', padding: '14px 20px', borderRadius: 16 }}>
-          <Icon name="warning" size={20} color="var(--danger)" />
-          <span style={{ flex: '1 1 300px', fontSize: 14, lineHeight: '20px' }}>{job.syncConflict}</span>
+        <div role="alert" className="notice notice--danger ops-alert">
+          <Icon name="warning" size={18} />
+          <span className="ops-alert__text">{job.syncConflict}</span>
           {canEdit && (
             <Button
               variant="tonal"
@@ -77,7 +87,17 @@ export function OfficeJob() {
           <Card title="Field record">
             <Rows
               rows={[
-                ['Status', <StatusDot color={liveStatusColor[st]}>{st === 'Late' ? lateByLabel(job) : st}{job.pendingSync ? ' · waiting to sync' : ''}</StatusDot>],
+                [
+                  'Status',
+                  <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <Badge tone={statusTone[st]}>{st === 'Late' ? lateByLabel(job) : st}</Badge>
+                    {job.pendingSync && (
+                      <Badge tone="amber" icon="sync">
+                        Waiting to sync
+                      </Badge>
+                    )}
+                  </span>,
+                ],
                 ['Scheduled', job.start ? `${fmtDateTime(job.start)} · ${job.durationHours} h` : 'Not scheduled'],
                 ['Team', job.assigneeIds.map(user).join(', ') || 'Unassigned'],
                 ['Check-in', job.checkIn ? `${fmtTime(job.checkIn.at)} · ${formatGps(job.checkIn.gps)}` : '—'],
@@ -90,7 +110,7 @@ export function OfficeJob() {
           <Card title={`Checklist · ${done} of ${job.checklist.length}`}>
             {job.checklist.map((s) => (
               <div key={s.id} className="row" style={{ gap: 12 }}>
-                <Icon name={s.done ? 'checkCircle' : 'circle'} color={s.done ? 'var(--primary)' : 'var(--faint)'} />
+                <Icon name={s.done ? 'checkCircle' : 'circle'} size={18} color={s.done ? 'var(--success)' : 'var(--faint)'} />
                 <span className="row__main">
                   <span>{s.label}</span>
                   <span className="t-small muted">{s.required ? 'Required' : 'Optional'}</span>
@@ -107,7 +127,7 @@ export function OfficeJob() {
                   <span>{s.label}</span>
                   <span className="t-small muted">{s.method === 'scan' ? 'Scanned' : 'Typed in'} · {s.warrantyYears}-year warranty</span>
                 </span>
-                <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14 }}>{s.serial}</span>
+                <span className="mono">{s.serial}</span>
               </div>
             ))}
           </Card>
@@ -116,11 +136,11 @@ export function OfficeJob() {
             {job.photos.length === 0 ? (
               <EmptyState title="No photos yet" />
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8, padding: '12px 0' }}>
+              <div className="photo-grid" style={{ padding: '16px 0' }}>
                 {job.photos.map((p) => (
                   <figure key={p.id} style={{ margin: 0 }} className="stack">
                     <PhotoThumb photo={p} label={`${p.kind} photo`} />
-                    <figcaption className="t-small muted" style={{ paddingTop: 4 }}>
+                    <figcaption className="t-caption faint" style={{ paddingTop: 4 }}>
                       {p.kind[0].toUpperCase() + p.kind.slice(1)} · {fmtTime(p.takenAt)} · {Math.round(p.bytes / 1024)} KB
                     </figcaption>
                   </figure>
@@ -143,8 +163,8 @@ export function OfficeJob() {
 
           <Card title="Customer sign-off">
             {job.signature ? (
-              <div className="stack" style={{ gap: 8, padding: '12px 0' }}>
-                {job.signature.dataUrl && <img src={job.signature.dataUrl} alt={`Signature of ${job.signature.name}`} style={{ width: '100%', maxHeight: 120, objectFit: 'contain', background: 'var(--bg)', borderRadius: 12 }} />}
+              <div className="stack" style={{ gap: 8, padding: '16px 0' }}>
+                {job.signature.dataUrl && <img src={job.signature.dataUrl} alt={`Signature of ${job.signature.name}`} style={{ width: '100%', maxHeight: 120, objectFit: 'contain', background: 'var(--surface-2)', border: '1px solid var(--divider)', borderRadius: 'var(--radius)' }} />}
                 <span className="t-small muted">
                   {job.signature.name} · {fmtDateTime(job.signature.at)}
                 </span>
@@ -173,8 +193,8 @@ export function OfficeJob() {
                   <span>
                     {x.qty} × {x.description}
                   </span>
-                  <span className="t-small muted">{naira(x.qty * priceOf(x.itemId))}</span>
                 </span>
+                <span className="num">{naira(x.qty * priceOf(x.itemId))}</span>
                 {x.invoiceId ? <Badge tone="green">Invoiced</Badge> : <Badge tone="amber">To invoice</Badge>}
               </div>
             ))}
@@ -194,14 +214,12 @@ export function OfficeJob() {
 
 function Card({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <section className="card stack" style={{ padding: '20px 24px 8px' }} aria-label={title}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 4 }}>
-        <h2 className="t-section-lg" style={{ flexGrow: 1 }}>
-          {title}
-        </h2>
+    <section className="card" aria-label={title}>
+      <div className="card__head">
+        <h2 className="t-section">{title}</h2>
         {action}
       </div>
-      {children}
+      <div className="ops-card__body">{children}</div>
     </section>
   );
 }
@@ -210,9 +228,9 @@ function Rows({ rows }: { rows: [string, ReactNode][] }) {
   return (
     <>
       {rows.map(([k, v]) => (
-        <div key={k} className="row row--between" style={{ fontSize: 14, lineHeight: '20px', gap: 12 }}>
-          <span className="muted">{k}</span>
-          <span style={{ textAlign: 'right' }}>{v}</span>
+        <div key={k} className="kv">
+          <span>{k}</span>
+          <span>{v}</span>
         </div>
       ))}
     </>
@@ -223,14 +241,14 @@ function Rows({ rows }: { rows: [string, ReactNode][] }) {
 function InvoiceLinkRow({ inv }: { inv: Invoice }) {
   const link = useShareLink('invoice', inv.id);
   return (
-    <a href={link || undefined} target="_blank" rel="noreferrer" className="row row--between" style={{ color: 'var(--text)' }}>
+    <a href={link || undefined} target="_blank" rel="noreferrer" className="row row--between">
       <span className="row__main">
         <span>{inv.description}</span>
         <span className="t-small muted">
           {inv.number} · due {fmtDate(inv.dueAt)}
         </span>
       </span>
-      <span>{naira(inv.amount)}</span>
+      <span className="num strong">{naira(inv.amount)}</span>
     </a>
   );
 }

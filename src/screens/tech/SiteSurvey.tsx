@@ -4,7 +4,7 @@ import { Icon } from '../../components/Icon';
 import { Dialog, SelectField, TextField } from '../../components/forms';
 import { AppBar, PhoneScreen, SyncBanner } from '../../components/PhoneScreen';
 import { PhotoInput, PhotoThumb } from '../../components/PhotoInput';
-import { Button, EmptyState, Stat } from '../../components/ui';
+import { Badge, Button, EmptyState, Stat } from '../../components/ui';
 import { appliancePresets, effectiveSize, sunHoursByState } from '../../data/domain';
 import { useCurrentUser, useDb } from '../../data/store';
 import { addAppliance, createQuickLead, editSurvey, startSurvey, submitSurvey } from '../../data/techActions';
@@ -19,7 +19,11 @@ export function SiteSurvey() {
     return (
       <PhoneScreen>
         <AppBar title="Survey" leading={{ to: '/tech', icon: 'back', label: 'Back' }} />
-        <EmptyState title="Survey not found" />
+        <div className="p-main">
+          <div className="card">
+            <EmptyState title="Survey not found">It may have been deleted. Start a new one from Today.</EmptyState>
+          </div>
+        </div>
       </PhoneScreen>
     );
   }
@@ -50,24 +54,25 @@ function NewSurvey() {
   return (
     <PhoneScreen>
       <AppBar title="New site survey" leading={{ to: '/tech', icon: 'close', label: 'Cancel' }} />
-      <main className="phone__scroll" style={{ padding: '8px 16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <h1 className="t-display" style={{ padding: '0 4px' }}>
-          Who is it for?
-        </h1>
-        <Button size="lg" variant="tonal" onClick={() => setQuickOpen(true)}>
+      <main className="phone__scroll p-main" style={{ gap: 16 }}>
+        <h1 className="t-display p-intro">Who is it for?</h1>
+        <Button size="xl" variant="tonal" onClick={() => setQuickOpen(true)}>
           <Icon name="add" size={20} />
           New customer on site
         </Button>
         {open.length > 0 && (
-          <section className="stack" style={{ gap: 8 }} aria-labelledby="enq">
-            <h2 id="enq" className="t-section" style={{ padding: '0 4px' }}>
-              New enquiries
-            </h2>
-            <div className="card" style={{ overflow: 'hidden' }}>
+          <section className="p-section" aria-labelledby="enq">
+            <div className="p-section__head">
+              <h2 id="enq" className="t-section-lg">
+                New enquiries
+              </h2>
+              <span className="t-small muted">{open.length}</span>
+            </div>
+            <div className="card p-list">
               {open.map((l) => (
-                <button key={l.id} type="button" className="row" onClick={() => pick(l.id)} style={{ width: '100%', background: 'none', border: 0, borderBottom: '1px solid var(--divider)', padding: '16px 16px 16px 20px', textAlign: 'left' }}>
+                <button key={l.id} type="button" className="job-row" onClick={() => pick(l.id)} style={{ width: '100%', background: 'none', border: 0, borderBottom: '1px solid var(--divider)', textAlign: 'left' }}>
                   <span className="row__main">
-                    <span>{l.name}</span>
+                    <span className="job-row__name">{l.name}</span>
                     <span className="t-small muted">
                       {l.propertyType} · {l.location}
                     </span>
@@ -118,8 +123,8 @@ function QuickLeadDialog({ open, onClose, onCreated }: { open: boolean; onClose:
         <SelectField id="ql-state" label="State" value={state} onChange={setState} options={Object.keys(sunHoursByState)} style={{ flex: 1 }} />
         <SelectField id="ql-type" label="Property" value={propertyType} onChange={setPropertyType} options={['Home', 'Shop', 'Office', 'Clinic', 'School', 'Other'] as const} style={{ flex: 1 }} />
       </div>
-      <label style={{ display: 'flex', gap: 12, alignItems: 'center', cursor: 'pointer' }} className="t-body">
-        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ width: 20, height: 20, margin: 0, accentColor: 'var(--primary)' }} />
+      <label className="choice t-body">
+        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
         Customer agrees to updates on WhatsApp
       </label>
     </Dialog>
@@ -154,25 +159,25 @@ function SurveyEditor({ survey }: { survey: Survey }) {
         leading={{ to: '/tech', icon: 'close', label: 'Close survey' }}
         trailing={
           !locked ? (
-            <Link to="/tech" className="btn btn--text" style={{ height: 40, padding: '0 12px', fontSize: 15 }}>
+            <Link to="/tech" className="btn btn--text btn--md">
               Save draft
             </Link>
           ) : undefined
         }
       />
 
-      <main className="phone__scroll" style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <div className="stack" style={{ padding: '8px 4px 0', gap: 8 }}>
-          <span className="t-small muted">{locked ? 'Submitted to office' : 'Draft · saved on this phone'}</span>
+      <main className="phone__scroll p-main">
+        <div className="p-intro">
+          <span>{locked ? <Badge tone="blue">Sent to office</Badge> : <Badge tone="amber">Draft · saved on this phone</Badge>}</span>
           <h1 className="t-display">What will they power?</h1>
         </div>
 
         <section aria-label="Result" className="card card--pad stack" style={{ gap: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+          <div className="p-grid-2" style={{ gap: 16 }}>
             <Stat label="Peak load" value={`${survey.peakW.toLocaleString('en-NG')} W`} size={24} />
             <Stat label="Daily energy" value={`${(survey.dailyWh / 1000).toFixed(1)} kWh`} size={24} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+          <div className="p-grid-2">
             <SelectField
               id="state"
               label={`Location · ${survey.sunHours} sun hours`}
@@ -196,70 +201,77 @@ function SurveyEditor({ survey }: { survey: Survey }) {
               onChange={(v) => !locked && editSurvey(survey.id, (s) => (s.backupHours = Math.max(1, Math.min(48, Number(v) || 1))))}
             />
           </div>
-          <div className="stack" style={{ padding: '12px 16px', borderRadius: 12, background: 'var(--primary-tint)', color: 'var(--on-primary-tint)', gap: 2 }} aria-live="polite">
+          <div className="size-panel" aria-live="polite">
             <span className="t-overline" style={{ color: 'inherit' }}>
               {overridden ? 'Your system' : 'Recommended'}
             </span>
-            <span className="t-body" style={{ fontWeight: 500 }}>
+            <span className="t-body strong">
               {size.kva} kVA inverter · {size.batteryKwh} kWh battery · {size.panels} panels
             </span>
             {!locked && (
-              <button type="button" onClick={() => setSizeOpen(true)} style={{ alignSelf: 'flex-start', background: 'none', border: 0, padding: '8px 0 0', color: 'var(--primary)', fontSize: 14, fontWeight: 500 }}>
+              <button type="button" className="btn btn--text btn--md" onClick={() => setSizeOpen(true)} style={{ alignSelf: 'flex-start', marginLeft: -8, marginTop: 4 }}>
                 {overridden ? 'Edit or reset' : 'Change sizes'}
               </button>
             )}
           </div>
         </section>
 
-        <section aria-labelledby="appl" className="stack" style={{ gap: 8 }}>
-          <h2 id="appl" className="t-section" style={{ padding: '0 4px' }}>
-            Appliances
-          </h2>
-          <div className="card" style={{ padding: '4px 16px 4px 20px' }}>
-            {survey.appliances.length === 0 && <p className="t-small muted">Add what the customer wants to run on solar.</p>}
+        <section aria-labelledby="appl" className="p-section">
+          <div className="p-section__head">
+            <h2 id="appl" className="t-section-lg">
+              Appliances
+            </h2>
+            {survey.appliances.length > 0 && <span className="t-small muted">{survey.appliances.length}</span>}
+          </div>
+          <div className="card card--list">
+            {survey.appliances.length === 0 && <EmptyState title="No appliances yet">Add what the customer wants to run on solar.</EmptyState>}
             {survey.appliances.map((a) => (
-              <div key={a.id} className="row" style={{ gap: 12, minHeight: 64, padding: 0 }}>
+              <div key={a.id} className="row" style={{ gap: 8, minHeight: 72, padding: '8px 0' }}>
                 <div className="row__main">
                   <span>{a.name}</span>
                   <span className="t-small muted">
                     {a.watts} W each · {a.hours} h a day
                   </span>
                 </div>
-                {!locked && (
-                  <button type="button" aria-label={`Fewer ${a.name}`} className="icon-btn icon-btn--outline" onClick={() => change(a.id, -1)}>
-                    <Icon name="remove" size={18} />
-                  </button>
-                )}
-                <span style={{ width: 24, textAlign: 'center', fontSize: 16, fontWeight: 500 }}>{a.qty}</span>
-                {!locked && (
-                  <button type="button" aria-label={`More ${a.name}`} className="icon-btn icon-btn--outline" onClick={() => change(a.id, 1)}>
-                    <Icon name="add" size={18} />
-                  </button>
-                )}
+                <div className="stepper">
+                  {!locked && (
+                    <button type="button" aria-label={`Fewer ${a.name}`} className="icon-btn icon-btn--outline" onClick={() => change(a.id, -1)}>
+                      <Icon name="remove" size={20} />
+                    </button>
+                  )}
+                  <span className="stepper__value">{a.qty}</span>
+                  {!locked && (
+                    <button type="button" aria-label={`More ${a.name}`} className="icon-btn icon-btn--outline" onClick={() => change(a.id, 1)}>
+                      <Icon name="add" size={20} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
           {!locked && (
-            <button type="button" className="btn btn--text" style={{ height: 48, alignSelf: 'flex-start' }} onClick={() => setAddOpen(true)}>
+            <button type="button" className="btn btn--tonal btn--lg" onClick={() => setAddOpen(true)}>
               <Icon name="add" size={20} />
               Add appliance
             </button>
           )}
         </section>
 
-        <section aria-labelledby="sphotos" className="stack" style={{ gap: 8 }}>
-          <h2 id="sphotos" className="t-section" style={{ padding: '0 4px' }}>
+        <section aria-labelledby="sphotos" className="p-section" style={{ gap: 12 }}>
+          <h2 id="sphotos" className="t-section-lg p-section__head">
             Photos
           </h2>
           {photoKinds.map(({ kind, label }) => {
             const photos = survey.photos.filter((p) => p.kind === kind);
             return (
               <div key={kind} className="stack" style={{ gap: 8 }}>
-                <span className="t-small muted" style={{ padding: '0 4px' }}>
-                  {label}
+                <span className="t-small muted p-footer-note">
+                  <span className="strong" style={{ color: 'var(--text)' }}>
+                    {label}
+                  </span>
                   {photos[0] && ` · ${new Date(photos[0].takenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · ${formatGps(photos[0].gps)}`}
                 </span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+                <div className="p-grid-3">
                   {photos.map((p, i) => (
                     <PhotoThumb key={p.id} photo={p} label={`${label} photo ${i + 1}`} onRemove={locked ? undefined : () => editSurvey(survey.id, (s) => (s.photos = s.photos.filter((x) => x.id !== p.id)))} />
                   ))}
@@ -335,7 +347,7 @@ function AddApplianceDialog({ open, onClose, onAdd }: { open: boolean; onClose: 
     >
       <SelectField id="ap-preset" label="Appliance" value={preset} onChange={choose} options={[...appliancePresets.map((p) => p.name), { value: '__custom', label: 'Other (type it in)' }]} />
       {custom && <TextField id="ap-name" label="Name" value={name} onChange={setName} />}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+      <div className="p-grid-3" style={{ gap: 12 }}>
         <TextField id="ap-w" label="Watts each" type="number" inputMode="numeric" value={watts} onChange={setWatts} />
         <TextField id="ap-h" label="Hours a day" type="number" inputMode="decimal" step="0.5" value={hours} onChange={setHours} />
         <TextField id="ap-q" label="How many" type="number" inputMode="numeric" value={qty} onChange={setQty} />

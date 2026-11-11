@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { Icon } from '../../../components/Icon';
 import { Dialog, SelectField, TextField } from '../../../components/forms';
 import { Badge, Button } from '../../../components/ui';
-import { roleLabel } from '../../../data/domain';
+import { fmtDateTime, roleLabel } from '../../../data/domain';
 import { saveStaff } from '../../../data/settingsActions';
-import { uid, useCurrentUser, useDb } from '../../../data/store';
+import { isBackend, uid, update, useCurrentUser, useDb } from '../../../data/store';
+import { signOutStaffEverywhere } from '../../../data/remote/sync';
 import type { Role, User } from '../../../data/types';
 
 const roles: Role[] = ['owner', 'office', 'technician', 'viewer'];
@@ -60,8 +61,9 @@ export function Staff() {
                   <span className="strong">{u.name}</span>
                   {u.id === me?.id && <span className="muted"> (you)</span>}
                   <div className="t-caption faint">{u.title}</div>
+                  {u.signedOutAt && <div className="t-caption faint">Signed out of all phones {fmtDateTime(u.signedOutAt)}</div>}
                 </td>
-                <td className="muted num" style={{ textAlign: 'left' }}>{u.phone}</td>
+                <td className="muted num">{u.phone}</td>
                 <td>{roleLabel[u.role]}</td>
                 <td>{u.active ? <Badge tone="green">Active</Badge> : <Badge>Deactivated</Badge>}</td>
                 <td className="num">
@@ -121,13 +123,44 @@ export function Staff() {
         </div>
       </section>
 
-      {editing && <StaffDialog user={editing} isNew={!users.some((u) => u.id === editing.id)} lastOwner={editing.role === 'owner' && owners <= 1} onClose={() => setEditing(null)} />}
+      {editing && (
+        <StaffDialog
+          user={editing}
+          isNew={!users.some((u) => u.id === editing.id)}
+          isMe={editing.id === me?.id}
+          lastOwner={editing.role === 'owner' && owners <= 1}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }
 
-function StaffDialog({ user, isNew, lastOwner, onClose }: { user: User; isNew: boolean; lastOwner: boolean; onClose: () => void }) {
+function StaffDialog({ user, isNew, isMe, lastOwner, onClose }: { user: User; isNew: boolean; isMe: boolean; lastOwner: boolean; onClose: () => void }) {
   const [u, setU] = useState(user);
+  const [wipe, setWipe] = useState<'idle' | 'confirm' | 'working' | 'done'>('idle');
+  const [wipeError, setWipeError] = useState('');
+  const signOutEverywhere = async () => {
+    setWipe('working');
+    setWipeError('');
+    if (isBackend) {
+      const { error } = await signOutStaffEverywhere(user.id);
+      if (error) {
+        setWipeError(error);
+        setWipe('confirm');
+        return;
+      }
+    } else {
+      // Demo: record it the way the server would
+      update((d) => {
+        const x = d.users.find((y) => y.id === user.id);
+        if (x) x.signedOutAt = new Date().toISOString();
+      });
+    }
+    // Keep the stamp if the owner presses Save afterwards
+    setU((x) => ({ ...x, signedOutAt: new Date().toISOString() }));
+    setWipe('done');
+  };
   const phoneOk = /^0[789][01]\d{8}$/.test(u.phone.replace(/\s/g, ''));
   const valid = u.name.trim() && phoneOk;
   const save = (next: User) => {
@@ -157,6 +190,49 @@ function StaffDialog({ user, isNew, lastOwner, onClose }: { user: User; isNew: b
       <SelectField id="sf-role" label="Role" value={u.role} onChange={(r) => setU({ ...u, role: r })} options={roles.filter((r) => !lastOwner || r === 'owner').map((r) => ({ value: r, label: roleLabel[r] }))} />
       <TextField id="sf-title" label="Job title" value={u.title} onChange={(v) => setU({ ...u, title: v })} placeholder="e.g. Installer" />
       {lastOwner && <span className="t-small muted">This is the only owner, so the role can't change.</span>}
+      {!isNew && !isMe && (
+        <div className="stack" style={{ gap: 8, paddingTop: 12, borderTop: '1px solid var(--divider)' }}>
+          <span className="t-section">Lost or stolen phone</span>
+          {wipe === 'done' ? (
+            <div className="notice notice--success" role="status">
+              <Icon name="checkCircle" size={18} />
+              <span>
+                {user.name} is signed out everywhere. Their phones delete the job data saved on them as soon as they connect. They can sign in again on a new
+                phone with a fresh code.
+              </span>
+            </div>
+          ) : wipe === 'idle' ? (
+            <>
+              <span className="t-small muted">
+                Signs {user.name} out of every phone and deletes the customer and job data saved on those phones. Anything they changed offline and haven't sent
+                yet is lost.
+              </span>
+              <span>
+                <Button variant="danger" size="sm" onClick={() => setWipe('confirm')}>
+                  <Icon name="logout" size={16} />
+                  Sign out of all phones
+                </Button>
+              </span>
+            </>
+          ) : (
+            <div className="notice notice--danger" role="alert">
+              <Icon name="warning" size={18} />
+              <div className="stack" style={{ gap: 10 }}>
+                <span>Sign {user.name} out of all phones now? Anything they haven't sent yet will be lost.</span>
+                {wipeError && <span className="strong">{wipeError}</span>}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button variant="danger" size="sm" disabled={wipe === 'working'} onClick={signOutEverywhere}>
+                    {wipe === 'working' ? 'Signing out…' : 'Yes, sign out and wipe'}
+                  </Button>
+                  <Button variant="text" size="sm" disabled={wipe === 'working'} onClick={() => setWipe('idle')}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </Dialog>
   );
 }

@@ -77,7 +77,7 @@ export function Billing() {
             <span className="t-small muted">Billed on active technicians. Office and viewer users are free.</span>
           </div>
           <ul className="plan__list">
-            {['Unlimited leads, quotes and jobs', 'Technician app with checklists, photos and sign-off', 'Customer quote, payment and handover pages', 'WhatsApp and SMS reminders'].map((f) => (
+            {['Leads, quotes, jobs and payments in one place', 'Technician app with checklists, photos and sign-off', 'Customer quote, payment and handover pages', 'WhatsApp and SMS reminders'].map((f) => (
               <li key={f}>
                 <Icon name="check" size={18} color="var(--success)" />
                 {f}

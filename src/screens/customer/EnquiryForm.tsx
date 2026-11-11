@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { SelectField, TextArea, TextField } from '../../components/forms';
 import { Icon } from '../../components/Icon';
 import { PhoneScreen } from '../../components/PhoneScreen';
-import { Button } from '../../components/ui';
+import { Badge, Button, EmptyState } from '../../components/ui';
 import { sunHoursByState } from '../../data/domain';
 import { createLead } from '../../data/salesActions';
 import type { EnquireResponse, FirmResponse } from '../../../supabase/functions/_shared/contract';
@@ -64,14 +64,15 @@ export function EnquiryForm() {
   if (remote.state !== 'ready') {
     return (
       <PhoneScreen fixed={false}>
-        <main style={{ padding: '64px 20px' }} className="stack" role="status">
+        <main className="c-main" role="status" style={{ paddingTop: 64 }}>
           {remote.state === 'loading' ? (
-            <span className="t-body muted">Loading…</span>
+            <span className="t-body muted p-loading" style={{ minHeight: 0 }}>
+              Loading…
+            </span>
           ) : (
-            <>
-              <h1 className="t-display">This form link isn't valid</h1>
-              <p className="t-body muted">Ask the installer for their current enquiry link.</p>
-            </>
+            <div className="card">
+              <EmptyState title="This form link isn't valid">Ask the installer for their current enquiry link.</EmptyState>
+            </div>
           )}
         </main>
       </PhoneScreen>
@@ -82,20 +83,25 @@ export function EnquiryForm() {
     <PhoneScreen fixed={false}>
       <BrandHeader company={company} />
       {done ? (
-        <main style={{ padding: '48px 20px', display: 'flex', flexDirection: 'column', gap: 12 }} aria-live="polite">
-          <Icon name="checkCircle" size={40} color="var(--success)" />
-          <h1 className="t-display">Thank you, {f.name.split(' ')[0]}</h1>
-          <p className="t-body muted" style={{ margin: 0 }}>
-            {company.name} has your request and will call you on {f.phone} to arrange a free site survey.
-          </p>
+        <main className="c-main" aria-live="polite" style={{ paddingTop: 40 }}>
+          <section className="c-ok" style={{ padding: 20, gap: 10 }}>
+            <Icon name="checkCircle" size={36} />
+            <h1 className="t-display">Thank you, {f.name.split(' ')[0]}</h1>
+            <p className="t-body" style={{ margin: 0 }}>
+              {company.name} has your request and will call you on {f.phone} to arrange a free site survey.
+            </p>
+          </section>
         </main>
       ) : (
-        <form onSubmit={submit} style={{ padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div className="stack" style={{ padding: '0 4px', gap: 8 }}>
+        <form onSubmit={submit} className="c-main">
+          <div className="p-intro">
             <h1 className="t-display">Get a solar quote</h1>
             <span className="t-body muted">Tell us a little about your place. We'll call you to book a free site survey.</span>
+            <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+              <Badge tone="green">Free site survey</Badge>
+            </span>
           </div>
-          <div className="card stack" style={{ padding: 20, gap: 16 }}>
+          <div className="card card--pad stack" style={{ gap: 16 }}>
             <TextField id="enq-name" label="Your name" value={f.name} onChange={set('name')} required />
             <TextField id="enq-phone" label="Phone number" type="tel" inputMode="tel" value={f.phone} onChange={set('phone')} placeholder="0803 123 4567" required />
             <TextField id="enq-loc" label="Area or address" value={f.location} onChange={set('location')} placeholder="e.g. Allen Avenue, Ikeja" required />
@@ -104,11 +110,13 @@ export function EnquiryForm() {
             <TextArea id="enq-notes" label="What do you want to power? (optional)" value={f.notes} onChange={set('notes')} placeholder="e.g. Fridge, fans, TV and lights during NEPA outages" />
             <ConsentCheckbox checked={f.whatsappConsent} onChange={set('whatsappConsent')} label={`Send me my quote and updates on WhatsApp`} />
           </div>
-          <span className="t-small muted" style={{ padding: '0 4px' }}>
+          <span className="t-small muted p-footer-note" style={{ display: 'flex', gap: 8 }}>
+            <Icon name="shield" size={18} style={{ marginTop: 1 }} />
             {company.name} uses your details only to respond to this request. Ask any time and we'll delete them.
           </span>
           {error && (
-            <span role="alert" className="t-small danger" style={{ padding: '0 4px' }}>
+            <span role="alert" className="notice notice--danger">
+              <Icon name="alertCircle" size={20} />
               {error}
             </span>
           )}

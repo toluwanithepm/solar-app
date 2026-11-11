@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { Dialog, TextField } from '../../components/forms';
 import { AppBar, PhoneScreen, SyncBanner } from '../../components/PhoneScreen';
-import { Button } from '../../components/ui';
+import { Badge, Button } from '../../components/ui';
 import { fmtDate, invoiceBalance, naira, whatsappLink } from '../../data/domain';
 import { useShareLink } from '../../data/remote/shareLinks';
 import { useDb } from '../../data/store';
@@ -53,35 +53,41 @@ export function Handover() {
     <PhoneScreen>
       <AppBar title={lead.name} leading={{ to: `/tech/jobs/${job.id}/work`, icon: 'back', label: 'Back' }} />
 
-      <main className="phone__scroll" style={{ padding: '8px 16px 16px', display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <div className="stack" style={{ padding: '0 4px', gap: 8 }}>
+      <main className="phone__scroll p-main">
+        <div className="p-intro">
           <h1 className="t-display">Handover</h1>
-          <span className="t-body muted">
-            {stepsDone} of {job.checklist.length} steps done · {job.serials.length} serials · {job.photos.length} photos
-          </span>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <Badge tone={stepsDone === job.checklist.length ? 'green' : 'neutral'} icon={stepsDone === job.checklist.length ? undefined : false}>
+              {stepsDone} of {job.checklist.length} steps
+            </Badge>
+            <Badge tone="neutral">{job.serials.length} serials</Badge>
+            <Badge tone="neutral">{job.photos.length} photos</Badge>
+          </div>
         </div>
 
         {(balance > 0 || offerPlan) && (
-          <div className="card" style={{ padding: '0 20px' }}>
+          <div className="card card--list">
             {balance > 0 && balanceInv && (
-              <div className="row" style={{ minHeight: 76, padding: 0 }}>
+              <div className="row" style={{ minHeight: 80 }}>
                 <span className="row__main">
                   <span className="t-small muted">Balance due</span>
-                  <span className="t-title">{naira(balance)}</span>
+                  <span className="t-title num">
+                    {naira(balance)}
+                  </span>
                 </span>
-                <Button variant="tonal" size="sm" disabled={!payLink} href={whatsappLink(lead.phone, `Hello ${lead.name}, you can pay the balance of ${naira(balance)} here: ${payLink}`)}>
+                <Button variant="tonal" size="md" disabled={!payLink} href={whatsappLink(lead.phone, `Hello ${lead.name}, you can pay the balance of ${naira(balance)} here: ${payLink}`)}>
                   {payLink ? 'Send pay link' : 'Pay link needs signal'}
                 </Button>
               </div>
             )}
             {offerPlan && (
-              <fieldset className="stack" style={{ border: 0, margin: 0, padding: '12px 0', gap: 4 }}>
-                <legend className="t-body" style={{ padding: 0 }}>
+              <fieldset className="stack" style={{ border: 0, margin: 0, padding: '14px 0 4px' }}>
+                <legend className="t-section" style={{ padding: 0 }}>
                   Maintenance plan
                 </legend>
                 {[{ id: '', name: 'No plan for now', price: 0, visitsPerYear: 0 }, ...plans].map((p) => (
-                  <label key={p.id || 'none'} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 48, cursor: 'pointer' }}>
-                    <input type="radio" name="plan" checked={planId === p.id} onChange={() => setPlanId(p.id)} style={{ width: 20, height: 20, margin: 0, accentColor: 'var(--primary)' }} />
+                  <label key={p.id || 'none'} className="choice">
+                    <input type="radio" name="plan" checked={planId === p.id} onChange={() => setPlanId(p.id)} />
                     <span className="row__main">
                       <span>{p.name}</span>
                       {p.id && (
@@ -105,33 +111,36 @@ export function Handover() {
             <span className="t-small muted">Completed {fmtDate(job.completedAt)}</span>
           </section>
         ) : (
-          <section aria-labelledby="sig" className="stack" style={{ gap: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
-              <h2 id="sig" className="t-section">
+          <section aria-labelledby="sig" className="p-section" style={{ gap: 12 }}>
+            <div className="p-section__head">
+              <h2 id="sig" className="t-section-lg">
                 Customer signature
               </h2>
-              <button type="button" className="btn btn--text" style={{ height: 40, fontSize: 14 }} onClick={() => setSignature('')} disabled={!signature}>
+              <button type="button" className="btn btn--text btn--md" onClick={() => setSignature('')} disabled={!signature}>
                 Clear
               </button>
             </div>
             <SignaturePad value={signature} onChange={setSignature} caption={`${name || 'Customer'} · ${fmtDate(new Date().toISOString())}`} />
             <TextField id="signer" label="Customer's name" value={name} onChange={setName} />
-            <span className="t-small muted" style={{ padding: '0 4px' }}>
+            <span className="t-small muted p-footer-note">
               By signing, the customer confirms the system works. The report and warranty go to them on WhatsApp.
             </span>
           </section>
         )}
 
         {missing.length > 0 && (
-          <section className="card card--pad stack" style={{ gap: 8 }} aria-labelledby="missing">
-            <h2 id="missing" className="t-small" style={{ fontWeight: 500, color: 'var(--danger)' }}>
-              Before you can complete
-            </h2>
-            <ul style={{ margin: 0, paddingLeft: 20 }} className="t-body">
-              {missing.map((m) => (
-                <li key={m}>{m}</li>
-              ))}
-            </ul>
+          <section className="notice notice--warning" aria-labelledby="missing">
+            <Icon name="alertCircle" size={20} style={{ marginTop: 2 }} />
+            <div className="stack" style={{ gap: 4 }}>
+              <h2 id="missing" className="t-section" style={{ color: 'inherit' }}>
+                Before you can complete
+              </h2>
+              <ul style={{ margin: 0, paddingLeft: 18 }} className="t-body">
+                {missing.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+            </div>
           </section>
         )}
 
@@ -188,7 +197,8 @@ function SignaturePad({ value, onChange, caption }: { value: string; onChange: (
     ctx.lineWidth = 2.2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#15191F';
+    // Ink colour from the theme (canvas can't read CSS variables directly)
+    ctx.strokeStyle = getComputedStyle(canvas).getPropertyValue('--text').trim() || 'black';
   }, []);
 
   useEffect(() => {
@@ -203,7 +213,7 @@ function SignaturePad({ value, onChange, caption }: { value: string; onChange: (
   };
 
   return (
-    <div className="card" style={{ height: 180, position: 'relative', overflow: 'hidden' }}>
+    <div className="card sig-pad">
       <canvas
         ref={canvasRef}
         aria-label="Signature pad. Ask the customer to sign with their finger."
@@ -232,8 +242,8 @@ function SignaturePad({ value, onChange, caption }: { value: string; onChange: (
         }}
         onPointerCancel={() => (drawing.current = false)}
       />
-      <div aria-hidden="true" style={{ position: 'absolute', left: 24, right: 24, bottom: 40, borderTop: '1px solid var(--border)', pointerEvents: 'none' }} />
-      <span className="t-small muted" style={{ position: 'absolute', left: 24, bottom: 14, pointerEvents: 'none' }}>
+      <div aria-hidden="true" className="sig-pad__line" />
+      <span className="t-small muted sig-pad__caption">
         {value ? caption : 'Sign here'}
       </span>
     </div>

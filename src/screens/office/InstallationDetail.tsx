@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import '../../styles/office-ops.css';
 import { useCan } from '../../components/Guards';
 import { OfficeShell } from '../../components/OfficeShell';
 import { PhotoThumb } from '../../components/PhotoInput';
@@ -57,10 +58,13 @@ export function InstallationDetail() {
       />
 
       <div className="wrap">
-        <section className="card table-scroll" style={{ flex: '2 1 560px', minWidth: 0 }} aria-labelledby="eq">
-          <h2 id="eq" className="t-section-lg" style={{ padding: '20px 24px 8px' }}>
-            Equipment · {ins.items.length} items
-          </h2>
+        <section className="card" style={{ flex: '2 1 560px', minWidth: 0 }} aria-labelledby="eq">
+          <div className="card__head">
+            <h2 id="eq" className="t-section">
+              Equipment · {ins.items.length} items
+            </h2>
+          </div>
+          <div className="table-scroll">
           <table className="table">
             <thead>
               <tr>
@@ -79,25 +83,32 @@ export function InstallationDetail() {
                       {it.label}
                       <div className="t-small muted">{categoryLabel[it.category]}</div>
                     </td>
-                    <td style={{ fontFamily: 'ui-monospace, monospace' }}>{it.serial ?? '—'}</td>
+                    <td className="mono">{it.serial ?? '—'}</td>
                     <td className="muted">{it.warrantyYears} years</td>
-                    <td>{days < 0 ? <Badge tone="neutral">Expired</Badge> : days <= 90 ? <Badge tone="amber">{fmtDate(it.warrantyEndsAt)}</Badge> : fmtDate(it.warrantyEndsAt)}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{days < 0 ? <Badge tone="neutral">Expired</Badge> : days <= 90 ? <Badge tone="amber">{fmtDate(it.warrantyEndsAt)}</Badge> : fmtDate(it.warrantyEndsAt)}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          </div>
         </section>
 
         <aside className="stack" style={{ flex: '1 1 300px', minWidth: 0, gap: 16 }}>
           <Panel title="Maintenance">
-            <Line k="Next service" v={fmtDate(ins.nextServiceAt)} />
+            <Line
+              k="Next service"
+              v={(() => {
+                const d = (new Date(ins.nextServiceAt).getTime() - now) / DAY;
+                return d < 0 ? <Badge tone="red">Overdue · {fmtDate(ins.nextServiceAt)}</Badge> : d <= 7 ? <Badge tone="amber">{fmtDate(ins.nextServiceAt)}</Badge> : fmtDate(ins.nextServiceAt);
+              })()}
+            />
             <Line k="Interval" v={`Every ${ins.serviceIntervalMonths} months`} />
             <Line k="Last reminder" v={ins.lastServiceReminderAt ? fmtDate(ins.lastServiceReminderAt) : 'Not yet'} />
             <Line k="Plan" v={plan ? `${plan.name} · ${ins.planVisitsLeft ?? 0} visits left` : 'None'} />
             {plan && <Line k="Renews" v={fmtDate(ins.planRenewsAt)} />}
             {canSell && (
-              <div className="stack" style={{ gap: 8, paddingTop: 12 }}>
+              <div className="stack" style={{ gap: 12, padding: '16px 0 20px', borderTop: '1px solid var(--divider)' }}>
                 <SelectField id="plan" label={plan ? 'Change plan' : 'Sell a plan'} value={planId} onChange={setPlanId} options={db.plans.map((p) => ({ value: p.id, label: `${p.name} · ${naira(p.price)} · ${p.visitsPerYear} visits` }))} />
                 <Button variant="tonal" disabled={!planId} onClick={() => sellPlan(ins.id, planId)}>
                   {plan ? 'Renew or switch plan' : 'Sell plan and send invoice'}
@@ -107,10 +118,10 @@ export function InstallationDetail() {
           </Panel>
 
           <Panel title="Fault-report link">
-            <p className="t-small muted" style={{ margin: '4px 0 12px' }}>
+            <p className="t-small muted" style={{ margin: '16px 0 12px' }}>
               The customer opens this to report a fault with photos.
             </p>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 20 }}>
               <Button
                 variant="tonal"
                 size="sm"
@@ -133,21 +144,21 @@ export function InstallationDetail() {
         <Panel title={`Service history · ${jobs.length}`} style={{ flex: '1 1 420px' }}>
           {jobs.length === 0 && <EmptyState title="No visits yet" />}
           {jobs.map((j) => (
-            <Link key={j.id} to={`/office/jobs/${j.id}`} className="row" style={{ gap: 12, color: 'var(--text)' }}>
+            <Link key={j.id} to={`/office/jobs/${j.id}`} className="row" style={{ gap: 12 }}>
               <span className="row__main">
                 <span>{j.type}</span>
                 <span className="t-small muted">
                   {j.number} · {j.completedAt ? `done ${fmtDate(j.completedAt)}` : j.start ? `scheduled ${fmtDate(j.start)}` : 'not scheduled'}
                 </span>
               </span>
-              <Badge tone={j.status === 'Done' ? 'green' : j.status === 'Unscheduled' ? 'amber' : 'blue'}>{j.status}</Badge>
+              <Badge tone={j.status === 'Done' ? 'green' : j.status === 'Unscheduled' ? 'amber' : j.status === 'Cancelled' ? 'neutral' : 'blue'}>{j.status}</Badge>
             </Link>
           ))}
         </Panel>
         <Panel title={`Fault reports · ${tickets.length}`} style={{ flex: '1 1 420px' }}>
           {tickets.length === 0 && <EmptyState title="No faults reported" />}
           {tickets.map((t) => (
-            <Link key={t.id} to="/office/service?tab=tickets" className="row" style={{ gap: 12, color: 'var(--text)' }}>
+            <Link key={t.id} to="/office/service?tab=tickets" className="row" style={{ gap: 12 }}>
               <span className="row__main">
                 <span>{t.description}</span>
                 <span className="t-small muted">
@@ -164,7 +175,7 @@ export function InstallationDetail() {
         {photos.length === 0 ? (
           <EmptyState title="No photos on record" />
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8, padding: '12px 0 16px' }}>
+          <div className="photo-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', padding: '16px 0 20px' }}>
             {photos.map((p) => (
               <PhotoThumb key={p.id} photo={p} label={`${p.kind} photo, ${fmtDate(p.takenAt)}`} />
             ))}
@@ -177,20 +188,20 @@ export function InstallationDetail() {
 
 function Panel({ title, children, style }: { title: string; children: ReactNode; style?: React.CSSProperties }) {
   return (
-    <section className="card stack" style={{ padding: '20px 24px 8px', minWidth: 0, ...style }} aria-label={title}>
-      <h2 className="t-section-lg" style={{ paddingBottom: 4 }}>
-        {title}
-      </h2>
-      {children}
+    <section className="card" style={{ minWidth: 0, ...style }} aria-label={title}>
+      <div className="card__head">
+        <h2 className="t-section">{title}</h2>
+      </div>
+      <div className="ops-card__body">{children}</div>
     </section>
   );
 }
 
 function Line({ k, v }: { k: string; v: ReactNode }) {
   return (
-    <div className="row row--between" style={{ fontSize: 14, lineHeight: '20px', gap: 12 }}>
-      <span className="muted">{k}</span>
-      <span style={{ textAlign: 'right' }}>{v}</span>
+    <div className="kv">
+      <span>{k}</span>
+      <span>{v}</span>
     </div>
   );
 }

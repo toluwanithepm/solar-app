@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import '../../styles/office-ops.css';
 import { useCan } from '../../components/Guards';
+import { Icon } from '../../components/Icon';
 import { OfficeShell } from '../../components/OfficeShell';
 import { PhotoThumb } from '../../components/PhotoInput';
-import { Dialog, SelectField, TextArea, TextField } from '../../components/forms';
+import { Dialog, MoneyField, SelectField, TextArea, TextField } from '../../components/forms';
 import { Badge, Button, EmptyState, PageHeader, Segmented } from '../../components/ui';
 import { DAY, fmtDate, fmtDateTime, naira } from '../../data/domain';
 import { addTicketUpdate, bookServiceVisit, createTicket, deletePlan, openServiceJob, savePlan, scheduleRepair } from '../../data/opsActions';
@@ -48,10 +50,11 @@ function DueList() {
   const due = db.installations.filter((i) => new Date(i.nextServiceAt).getTime() - now <= 30 * DAY).sort((a, b) => a.nextServiceAt.localeCompare(b.nextServiceAt));
 
   return (
-    <section className="card table-scroll" aria-label="Installations due for service in the next 30 days">
+    <section className="card" aria-label="Installations due for service in the next 30 days">
       {due.length === 0 ? (
-        <EmptyState title="No services due in the next 30 days" />
+        <EmptyState title="No services due in the next 30 days">Installations show up here a month before their next visit.</EmptyState>
       ) : (
+        <div className="table-scroll">
         <table className="table">
           <thead>
             <tr>
@@ -70,16 +73,20 @@ function DueList() {
               return (
                 <tr key={i.id}>
                   <td>
-                    <Link to={`/office/installations/${i.id}`} style={{ color: 'var(--text)', fontWeight: 500 }}>
+                    <Link to={`/office/installations/${i.id}`} className="cell-link">
                       {lead?.name}
                     </Link>
                     <div className="t-small muted">{i.site}</div>
                   </td>
                   <td>
-                    {fmtDate(i.nextServiceAt)}
-                    <div className="t-small" style={{ color: days < 0 ? 'var(--danger)' : 'var(--muted)' }}>
-                      {days < 0 ? `${-days} days overdue` : days === 0 ? 'Today' : `In ${days} days`}
-                    </div>
+                    <div style={{ whiteSpace: 'nowrap' }}>{fmtDate(i.nextServiceAt)}</div>
+                    {days < 0 ? (
+                      <Badge tone="red">{-days} days overdue</Badge>
+                    ) : days <= 7 ? (
+                      <Badge tone="amber">{days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`}</Badge>
+                    ) : (
+                      <div className="t-caption faint">In {days} days</div>
+                    )}
                   </td>
                   <td className="muted">{i.lastServiceReminderAt ? `Sent ${fmtDate(i.lastServiceReminderAt)}` : days <= 7 ? 'Sending today' : `Goes out ${fmtDate(new Date(new Date(i.nextServiceAt).getTime() - 7 * DAY).toISOString())}`}</td>
                   <td className="muted">{db.plans.find((p) => p.id === i.planId)?.name ?? 'No plan'}</td>
@@ -107,6 +114,7 @@ function DueList() {
             })}
           </tbody>
         </table>
+        </div>
       )}
     </section>
   );
@@ -123,9 +131,9 @@ function Plans() {
 
   return (
     <div className="wrap">
-      <section className="card stack" style={{ flex: '1 1 420px', padding: '20px 24px 8px' }} aria-labelledby="plans">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 4 }}>
-          <h2 id="plans" className="t-section-lg" style={{ flexGrow: 1 }}>
+      <section className="card" style={{ flex: '1 1 420px' }} aria-labelledby="plans">
+        <div className="card__head">
+          <h2 id="plans" className="t-section">
             Maintenance plans
           </h2>
           {canEdit && (
@@ -134,36 +142,46 @@ function Plans() {
             </Button>
           )}
         </div>
-        <span className="t-small muted">
+        <p className="t-small muted ops-card__note" style={{ margin: 0 }}>
           {withPlan} of {db.installations.length} installations ({share}%) have a plan. Sell plans from an installation record or at handover.
-        </span>
-        {db.plans.map((p) => {
-          const used = db.installations.filter((i) => i.planId === p.id).length;
-          return (
-            <div key={p.id} className="row" style={{ gap: 12 }}>
-              <span className="row__main">
-                <span>{p.name}</span>
-                <span className="t-small muted">
-                  {naira(p.price)} a year · {p.visitsPerYear} visits · {used} customer{used === 1 ? '' : 's'}
+        </p>
+        <div className="ops-card__body">
+          {db.plans.length === 0 && <EmptyState title="No plans yet">Add a plan to sell yearly maintenance.</EmptyState>}
+          {db.plans.map((p) => {
+            const used = db.installations.filter((i) => i.planId === p.id).length;
+            return (
+              <div key={p.id} className="row" style={{ gap: 12 }}>
+                <span className="row__main">
+                  <span className="strong">{p.name}</span>
+                  <span className="t-small muted">
+                    {p.visitsPerYear} visits a year · {used} customer{used === 1 ? '' : 's'}
+                  </span>
                 </span>
-              </span>
-              {canEdit && (
-                <Button size="sm" variant="text" onClick={() => setEditing(p)}>
-                  Edit
-                </Button>
-              )}
-            </div>
-          );
-        })}
+                <span className="num">
+                  <span className="strong">{naira(p.price)}</span>
+                  <span className="t-caption faint"> / year</span>
+                </span>
+                {canEdit && (
+                  <Button size="sm" variant="text" onClick={() => setEditing(p)} ariaLabel={`Edit ${p.name}`}>
+                    Edit
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </section>
 
-      <section className="card stack" style={{ flex: '1 1 420px', padding: '20px 24px 8px' }} aria-labelledby="renew">
-        <h2 id="renew" className="t-section-lg" style={{ paddingBottom: 4 }}>
-          Renewals in the next 30 days
-        </h2>
-        {renewals.length === 0 && <EmptyState title="No renewals due" />}
+      <section className="card" style={{ flex: '1 1 420px' }} aria-labelledby="renew">
+        <div className="card__head">
+          <h2 id="renew" className="t-section">
+            Renewals in the next 30 days
+          </h2>
+        </div>
+        <div className="ops-card__body">
+        {renewals.length === 0 && <EmptyState title="No renewals due">Plans renewing within 30 days appear here.</EmptyState>}
         {renewals.map((i) => (
-          <Link key={i.id} to={`/office/installations/${i.id}`} className="row" style={{ gap: 12, color: 'var(--text)' }}>
+          <Link key={i.id} to={`/office/installations/${i.id}`} className="row" style={{ gap: 12 }}>
             <span className="row__main">
               <span>{db.leads.find((l) => l.id === i.leadId)?.name}</span>
               <span className="t-small muted">
@@ -173,6 +191,7 @@ function Plans() {
             {i.lastRenewalReminderAt ? <Badge tone="green">Reminded</Badge> : <Badge tone="amber">Reminder pending</Badge>}
           </Link>
         ))}
+        </div>
       </section>
 
       {editing && <PlanDialog plan={editing} inUse={db.installations.some((i) => i.planId === editing.id)} onClose={() => setEditing(null)} />}
@@ -182,9 +201,9 @@ function Plans() {
 
 function PlanDialog({ plan, inUse, onClose }: { plan: MaintenancePlan; inUse: boolean; onClose: () => void }) {
   const [name, setName] = useState(plan.name);
-  const [price, setPrice] = useState(String(plan.price));
+  const [price, setPrice] = useState<number>(plan.price);
   const [visits, setVisits] = useState(String(plan.visitsPerYear));
-  const valid = name.trim() && Number(price) > 0 && Number(visits) >= 1;
+  const valid = name.trim() && price > 0 && Number(visits) >= 1;
   return (
     <Dialog
       open
@@ -206,7 +225,7 @@ function PlanDialog({ plan, inUse, onClose }: { plan: MaintenancePlan; inUse: bo
           <Button
             disabled={!valid}
             onClick={() => {
-              savePlan({ id: plan.id, name: name.trim(), price: Math.round(Number(price)), visitsPerYear: Math.round(Number(visits)) });
+              savePlan({ id: plan.id, name: name.trim(), price: Math.round(price), visitsPerYear: Math.round(Number(visits)) });
               onClose();
             }}
           >
@@ -217,8 +236,8 @@ function PlanDialog({ plan, inUse, onClose }: { plan: MaintenancePlan; inUse: bo
     >
       <TextField id="pl-name" label="Name" value={name} onChange={setName} placeholder="e.g. Care plus" />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <TextField id="pl-price" label="Price a year (₦)" type="number" min={0} value={price} onChange={setPrice} style={{ flex: '1 1 160px' }} />
-        <TextField id="pl-visits" label="Visits a year" type="number" min={1} value={visits} onChange={setVisits} style={{ flex: '1 1 120px' }} hint="Each visit is booked automatically when due" />
+        <MoneyField id="pl-price" label="Price a year" value={price} onChange={setPrice} required style={{ flex: '1 1 160px' }} />
+        <TextField id="pl-visits" label="Visits a year" type="number" inputMode="numeric" min={1} value={visits} onChange={setVisits} style={{ flex: '1 1 120px' }} hint="Each visit is booked automatically when due" />
       </div>
       {inUse && <span className="t-small muted">Customers are on this plan, so it can't be deleted.</span>}
     </Dialog>
@@ -236,7 +255,7 @@ function Tickets() {
 
   return (
     <>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+      <div className="ops-filters">
         <Segmented
           label="Ticket status"
           value={filter}
@@ -251,7 +270,7 @@ function Tickets() {
       </div>
       {list.length === 0 && (
         <div className="card">
-          <EmptyState title={`No ${filter === 'All' ? '' : filter.toLowerCase() + ' '}fault reports`} />
+          <EmptyState title={`No ${filter === 'All' ? '' : filter.toLowerCase() + ' '}fault reports`}>{filter === 'Open' ? 'Customers report faults from their link, or log one from a call.' : undefined}</EmptyState>
         </div>
       )}
       <div className="grid-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(360px, 100%), 1fr))', alignItems: 'start' }}>
@@ -259,31 +278,37 @@ function Tickets() {
           const lead = db.leads.find((l) => l.id === t.leadId);
           const job = db.jobs.find((j) => j.ticketId === t.id && j.status !== 'Cancelled');
           const ageH = Math.round((Date.now() - new Date(t.createdAt).getTime()) / 3_600_000);
+          // Age emphasis: an open fault waiting a day is a warning, two days is stale
+          const open = t.status === 'Open';
+          const ageCls = open && ageH >= 48 ? ' ticket__age--stale' : open && ageH >= 24 ? ' ticket__age--warn' : '';
           return (
-            <article key={t.id} className="card stack" style={{ padding: 20, gap: 12 }} aria-label={`${t.number} from ${lead?.name}`}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="t-small muted" style={{ flexGrow: 1 }}>
-                  {t.number} · via {t.channel} · {ageH < 48 ? `${ageH} h ago` : fmtDate(t.createdAt)}
+            <article key={t.id} className={`card ticket${open && ageH >= 48 ? ' ticket--stale' : ''}`} aria-label={`${t.number} from ${lead?.name}`}>
+              <div className="ticket__head">
+                <span className="t-small mono">{t.number}</span>
+                <span className="t-caption faint" style={{ flexGrow: 1 }}>
+                  via {t.channel}
                 </span>
                 <Badge tone={t.status === 'Open' ? 'red' : t.status === 'Scheduled' ? 'blue' : 'green'}>{t.status}</Badge>
               </div>
-              <div className="stack" style={{ gap: 2 }}>
+              <div className="stack" style={{ gap: 4 }}>
                 <span className="t-section">{lead?.name}</span>
                 <span className="t-body">{t.description}</span>
+                <span className={`ticket__age${ageCls}${ageCls ? '' : ' faint'}`}>
+                  <Icon name="clock" size={13} />
+                  {ageH < 48 ? `Reported ${ageH} h ago` : `Reported ${fmtDate(t.createdAt)} · ${Math.floor(ageH / 24)} days`}
+                </span>
               </div>
               {t.photos.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
+                <div className="ticket__photos">
                   {t.photos.map((p) => (
-                    <PhotoThumb key={p.id} photo={p} label="Fault photo" style={{ borderRadius: 10 }} />
+                    <PhotoThumb key={p.id} photo={p} label="Fault photo" style={{ borderRadius: 'var(--radius)' }} />
                   ))}
                 </div>
               )}
-              <ol className="stack" style={{ margin: 0, padding: 0, listStyle: 'none', gap: 6, borderTop: '1px solid var(--divider)', paddingTop: 12 }}>
+              <ol className="ticket__log" aria-label="Updates">
                 {t.updates.map((u, i) => (
-                  <li key={i} className="t-small" style={{ display: 'flex', gap: 8 }}>
-                    <span className="muted" style={{ flexShrink: 0, width: 110 }}>
-                      {fmtDateTime(u.at)}
-                    </span>
+                  <li key={i} className="t-small">
+                    <time dateTime={u.at}>{fmtDateTime(u.at)}</time>
                     <span>{u.text}</span>
                   </li>
                 ))}

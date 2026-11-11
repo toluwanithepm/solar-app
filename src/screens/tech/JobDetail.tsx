@@ -94,7 +94,7 @@ export function JobDetail() {
               {job.equipment.map((e) => (
                 <div key={e.description} className="row row--between">
                   <span>{e.description}</span>
-                  <span className="strong num">× {e.qty}</span>
+                  <span className="strong num" style={{ whiteSpace: 'nowrap' }}>× {e.qty}</span>
                 </div>
               ))}
             </div>
@@ -134,7 +134,7 @@ export function JobDetail() {
             </h2>
             <div className="card card--pad stack" style={{ gap: 4 }}>
               <span className="t-small muted">Balance to collect at handover</span>
-              <span className="t-figure num" style={{ textAlign: 'left' }}>
+              <span className="t-figure num">
                 {naira(balance)}
               </span>
             </div>

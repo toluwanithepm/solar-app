@@ -18,7 +18,7 @@ const NAME_COL = 168;
 const gridColumns = `${NAME_COL}px repeat(${SLOTS}, minmax(0, 1fr))`;
 const weekColumns = `${NAME_COL}px repeat(7, minmax(0, 1fr))`;
 /** Faint hour gridlines behind the day timeline (starting after the technician column). */
-const hourLines = `repeating-linear-gradient(to right, var(--divider) 0 1px, transparent 1px calc((100% - ${NAME_COL}px) / ${HOURS}))`;
+const hourLines = `repeating-linear-gradient(to right, var(--divider) 0 1px, transparent 1px calc(100% / ${HOURS}))`;
 
 /** Per-type colour classes (tokens in office-ops.css) and short labels for the job blocks. */
 const typeClass: Record<JobType, string> = {
