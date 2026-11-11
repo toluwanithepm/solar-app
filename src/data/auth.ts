@@ -64,9 +64,15 @@ async function leave() {
  * A sign-in made after the wipe (e.g. on a new phone) is not affected.
  */
 const signedInAtMs = () => Number(localStorage.getItem(SIGNED_IN_AT_KEY) ?? 0);
+/**
+ * The token's sign-in time only has whole seconds, so compare in whole seconds: a wipe in the same second as
+ * this sign-in counts as before it. That case can't wipe a fresh sign-in by mistake, and an old sign-in in the
+ * same second is still caught, because the server ended its session (checkStillSignedIn's sign-in check).
+ */
 const wipedAfterSignIn = (signedOutAt: string | null | undefined) => {
-  const at = signedInAtMs();
-  return Boolean(signedOutAt && at && new Date(signedOutAt).getTime() > at);
+  const atSec = Math.floor(signedInAtMs() / 1000);
+  if (!signedOutAt || !atSec) return false;
+  return Math.floor(new Date(signedOutAt).getTime() / 1000) > atSec;
 };
 
 let wiping = false;
