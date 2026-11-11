@@ -18,10 +18,19 @@ export function SyncBanner({ style, inset }: { style?: CSSProperties; /** Pad to
   const pending = isBackend ? sync.pending : demoPending;
   const changes = `${pending} change${pending === 1 ? '' : 's'}`;
   const tone = !online ? ' p-sync--offline' : pending ? ' p-sync--pending' : '';
-  const text = online ? (pending ? `Sending ${changes}…` : 'Online · all changes sent') : pending ? `Offline · ${changes} waiting to send` : 'Offline · changes will be kept on this phone';
+  const text = !isBackend
+    ? 'Demo · changes stay on this phone only'
+    : online
+      ? pending
+        ? `Sending ${changes}…`
+        : 'Online · all changes sent' : pending ? `Offline · ${changes} waiting to send` : 'Offline · changes will be kept on this phone';
   const banner = (
     <div className={`sync-banner p-sync${tone}`} role="status" style={inset ? undefined : style}>
-      <Icon name={online ? (pending ? 'sync' : 'checkCircle') : 'cloudOff'} size={20} color={online && !pending ? 'var(--success)' : undefined} />
+      <Icon
+        name={!isBackend ? 'warning' : online ? (pending ? 'sync' : 'checkCircle') : 'cloudOff'}
+        size={20}
+        color={!isBackend ? 'var(--warning)' : online && !pending ? 'var(--success)' : undefined}
+      />
       <span className="p-sync__text">{text}</span>
       <button type="button" className="btn btn--text" onClick={() => setForcedOffline(online)}>
         {online ? 'Go offline' : 'Go online'}

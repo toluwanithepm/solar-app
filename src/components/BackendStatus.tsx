@@ -22,9 +22,27 @@ export function BackendGate({ children }: { children: ReactNode }) {
   }
   return (
     <>
+      <DemoModeNotice />
       <SyncErrorBanner />
       {children}
     </>
+  );
+}
+
+/**
+ * A hosted site built without the Supabase settings runs as a demo: every device keeps its own sample data
+ * and nothing is shared. Say so plainly, so it can't be mistaken for the real thing.
+ */
+function DemoModeNotice() {
+  const local = /^(localhost|127.0.0.1|[::1])$/.test(location.hostname);
+  if (isBackend || local) return null;
+  return (
+    <div role="note" className="no-print demo-strip">
+      <Icon name="warning" size={16} />
+      <span>
+        <strong>Demo mode.</strong> Changes stay on this device and aren't shared with the office or other phones.
+      </span>
+    </div>
   );
 }
 

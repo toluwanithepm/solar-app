@@ -817,3 +817,21 @@
 .p-grid-2 .num {
   text-align: left;
 }
+
+/* Hosted demo build (no Supabase settings): always visible, never mistaken for live data */
+.demo-strip {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--warning-tint);
+  color: var(--warning-text);
+  border-bottom: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+}
