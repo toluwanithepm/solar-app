@@ -173,7 +173,7 @@ export function PageHeader({ title, subtitle, back, actions }: { title: ReactNod
 }
 
 /** Label/value pair stacked vertically, used for stat readouts. */
-export function Stat({ label, value, size = 20 }: { label: string; value: ReactNode; size?: number }) {
+export function Stat({ label, value, size = 20 }: { label: ReactNode; value: ReactNode; size?: number }) {
   return (
     <div className="stack" style={{ gap: 2 }}>
       <span className="t-small muted">{label}</span>

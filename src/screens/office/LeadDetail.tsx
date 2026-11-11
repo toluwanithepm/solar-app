@@ -3,7 +3,9 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCan } from "../../components/Guards";
 import { Icon } from "../../components/Icon";
 import { OfficeShell } from "../../components/OfficeShell";
-import { Badge, Button, EmptyState, PageHeader } from "../../components/ui";
+import { Badge, Button, PageHeader } from "../../components/ui";
+import { JourneyBar, NextStepCard } from "../../components/Guide";
+import { journeyFor } from "../../data/journey";
 import {
   describeSize,
   effectiveSize,
@@ -36,7 +38,7 @@ export function LeadDetail() {
       <OfficeShell>
         <PageHeader
           title="Lead not found"
-          back={{ to: "/office/leads", label: "Leads" }}
+          back={{ to: "/office/leads", label: "Customers" }}
         />
       </OfficeShell>
     );
@@ -60,12 +62,18 @@ export function LeadDetail() {
       j.status !== "Cancelled",
   );
 
+  const journey = journeyFor(db, lead);
+
   return (
     <OfficeShell>
       <PageHeader
         title={lead.name}
-        back={{ to: "/office/leads", label: "Leads" }}
-        subtitle={`${lead.propertyType} · ${lead.address} · from ${lead.source}, ${fmtDate(lead.createdAt)}`}
+        back={{ to: "/office/leads", label: "Customers" }}
+        subtitle={
+          <>
+            <a href={`tel:${lead.phone}`}>{lead.phone}</a> · {lead.propertyType} · {lead.address} · from {lead.source}, {fmtDate(lead.createdAt)}
+          </>
+        }
         actions={
           <>
             <StageControl lead={lead} />
@@ -75,16 +83,9 @@ export function LeadDetail() {
             >
               WhatsApp
             </WhatsAppButton>
-            {canLeads && !openSurvey && (
+            {canQuote && journey.next.kind !== "new-quote" && !journey.lost && (
               <Button
                 variant="tonal"
-                onClick={() => navigate(`/office/jobs/${bookSurvey(lead.id)}`)}
-              >
-                Book site survey
-              </Button>
-            )}
-            {canQuote && (
-              <Button
                 to={`/office/quotes/new?leadId=${lead.id}${surveys[0] ? `&surveyId=${surveys[surveys.length - 1].id}` : ""}`}
               >
                 New quote
@@ -94,14 +95,21 @@ export function LeadDetail() {
         }
       />
 
+      <section className="card card--pad" aria-label="Where this customer is">
+        <JourneyBar journey={journey} />
+      </section>
+      <NextStepCard
+        journey={journey}
+        canAct={journey.next.kind === "new-quote" ? canQuote : canLeads || canQuote}
+        onBookSurvey={() => {
+          if (openSurvey) return;
+          navigate(`/office/jobs/${bookSurvey(lead.id)}`);
+        }}
+      />
+
+      {money.billed > 0 && (
       <div className="kpi-row">
         <div className="kpi-grid">
-          <div className="card stat-tile">
-            <span className="t-small muted">Phone</span>
-            <a href={`tel:${lead.phone}`} className="stat-tile__value">
-              {lead.phone}
-            </a>
-          </div>
           <div className="card stat-tile">
             <span className="t-small muted">Billed</span>
             <span className="stat-tile__value">{naira(money.billed)}</span>
@@ -120,6 +128,7 @@ export function LeadDetail() {
           </div>
         </div>
       </div>
+      )}
 
       {lead.notes && (
         <section className="card card--pad" aria-label="Notes">
@@ -147,13 +156,18 @@ export function LeadDetail() {
         </Section>
       )}
 
+      {quotes.length + jobs.length + invoices.length + surveys.length + installations.length === 0 && (
+        <p className="t-small muted" style={{ margin: 0 }}>
+          Surveys, quotes, jobs and invoices for {lead.name} will appear here as you go.
+        </p>
+      )}
+
       <div className="wrap">
         <div
           className="stack"
           style={{ flex: "2 1 480px", minWidth: 0, gap: 24 }}
         >
-          <Section title="Quotes">
-            {quotes.length === 0 && <EmptyState title="No quotes yet" />}
+          <Section title="Quotes" empty={quotes.length === 0}>
             {quotes.map((q) => (
               <Link key={q.id} to={`/office/quotes/${q.id}`} className="row">
                 <span className="row__main">
@@ -170,8 +184,7 @@ export function LeadDetail() {
             ))}
           </Section>
 
-          <Section title="Jobs">
-            {jobs.length === 0 && <EmptyState title="No jobs yet" />}
+          <Section title="Jobs" empty={jobs.length === 0}>
             {jobs.map((j) => (
               <Link key={j.id} to={`/office/jobs/${j.id}`} className="row">
                 <span className="row__main">
@@ -199,8 +212,7 @@ export function LeadDetail() {
             ))}
           </Section>
 
-          <Section title="Invoices">
-            {invoices.length === 0 && <EmptyState title="No invoices yet" />}
+          <Section title="Invoices" empty={invoices.length === 0}>
             {invoices.map((inv) => {
               const st = invoiceStatus(db, inv);
               return (
@@ -236,8 +248,7 @@ export function LeadDetail() {
           className="stack"
           style={{ flex: "1 1 300px", minWidth: 0, gap: 24 }}
         >
-          <Section title="Site surveys">
-            {surveys.length === 0 && <EmptyState title="No surveys yet" />}
+          <Section title="Site surveys" empty={surveys.length === 0}>
             {surveys.map((s) => (
               <div
                 key={s.id}
@@ -259,10 +270,7 @@ export function LeadDetail() {
             ))}
           </Section>
 
-          <Section title="Installed systems">
-            {installations.length === 0 && (
-              <EmptyState title="Nothing installed yet" />
-            )}
+          <Section title="Installed systems" empty={installations.length === 0}>
             {installations.map((ins) => (
               <Link
                 key={ins.id}
@@ -288,7 +296,9 @@ export function LeadDetail() {
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/** Empty sections stay out of the way until there is something to show (selective attention). */
+function Section({ title, children, empty }: { title: string; children: ReactNode; empty?: boolean }) {
+  if (empty) return null;
   return (
     <section className="card" aria-label={title}>
       <div className="card__head">

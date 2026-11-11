@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Dialog,
   SelectField,
@@ -12,7 +12,9 @@ import { OfficeShell } from "../../components/OfficeShell";
 import { Badge, Button, EmptyState, PageHeader } from "../../components/ui";
 import { fmtDate, sunHoursByState } from "../../data/domain";
 import { createLead, setLeadStage } from "../../data/salesActions";
-import { useDb } from "../../data/store";
+import { isBackend, useDb } from "../../data/store";
+import { journeyFor } from "../../data/journey";
+import { InfoTip } from "../../components/Guide";
 import type {
   Lead,
   LeadSource,
@@ -48,12 +50,15 @@ export const stageTone = (s: LeadStage) =>
   })[s] as "blue" | "amber" | "green" | "neutral";
 
 export function Leads() {
-  const leads = useDb((d) => d.leads);
+  const db = useDb();
+  const leads = db.leads;
   const canEdit = useCan("edit.leads");
   const navigate = useNavigate();
   const [stage, setStage] = useState<LeadStage | "All">("All");
   const [q, setQ] = useState("");
-  const [adding, setAdding] = useState(false);
+  // ?new=1 (from Home or Help) opens the enquiry form straight away
+  const [params] = useSearchParams();
+  const [adding, setAdding] = useState(params.get("new") === "1");
 
   const counts = useMemo(
     () =>
@@ -76,13 +81,16 @@ export function Leads() {
   return (
     <OfficeShell>
       <PageHeader
-        title="Leads and customers"
-        subtitle={`${leads.length} contacts · ${counts.New} new enquiries`}
+        title="Customers"
+        subtitle={`${leads.length} customers · ${counts.New} new enquiries. Open one to see its next step.`}
         actions={
           <>
-            <Button variant="tonal" href="/enquire">
-              Enquiry form link
-            </Button>
+            <span className="term">
+              <Button variant="tonal" {...(isBackend ? { to: "/office/settings/company" } : { href: "/enquire" })}>
+                Enquiry form link
+              </Button>
+              <InfoTip term="enquiryLink" />
+            </span>
             {canEdit && (
               <Button onClick={() => setAdding(true)}>Log enquiry</Button>
             )}
@@ -121,9 +129,9 @@ export function Leads() {
         </label>
       </div>
 
-      <section className="card" aria-label="Leads">
+      <section className="card" aria-label="Customers">
         {shown.length === 0 ? (
-          <EmptyState title="No leads here">
+          <EmptyState title="No customers here">
             {q
               ? `Nothing matches “${q}”. Try another search or stage.`
               : "Try another stage, or log a new enquiry."}
@@ -133,13 +141,16 @@ export function Leads() {
             <table className="table">
               <thead>
                 <tr>
-                  <th scope="col">Name</th>
+                  <th scope="col">Customer</th>
                   <th scope="col">Phone</th>
-                  <th scope="col">Location</th>
-                  <th scope="col">Source</th>
-                  <th scope="col">Property</th>
+                  <th scope="col">
+                    <span className="term">
+                      Stage
+                      <InfoTip term="stage" />
+                    </span>
+                  </th>
+                  <th scope="col">Next step</th>
                   <th scope="col">Added</th>
-                  <th scope="col">Stage</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,15 +168,16 @@ export function Leads() {
                       >
                         {l.name}
                       </Link>
+                      <span className="cell-sub">
+                        {l.location} · {l.propertyType} · via {l.source}
+                      </span>
                     </td>
                     <td className="muted cell-time">{l.phone}</td>
-                    <td>{l.location}</td>
-                    <td className="muted">{l.source}</td>
-                    <td className="muted">{l.propertyType}</td>
-                    <td className="muted cell-time">{fmtDate(l.createdAt)}</td>
                     <td>
                       <Badge tone={stageTone(l.stage)}>{l.stage}</Badge>
                     </td>
+                    <td className="muted">{journeyFor(db, l).next.label}</td>
+                    <td className="muted cell-time">{fmtDate(l.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -31,7 +31,7 @@ export function OfficeJob() {
   if (!job) {
     return (
       <OfficeShell>
-        <PageHeader title="Job not found" back={{ to: '/office/schedule', label: 'Schedule' }} />
+        <PageHeader title="Job not found" back={{ to: '/office/schedule', label: 'Jobs' }} />
       </OfficeShell>
     );
   }
@@ -47,7 +47,7 @@ export function OfficeJob() {
   return (
     <OfficeShell>
       <PageHeader
-        back={{ to: '/office/schedule', label: 'Schedule' }}
+        back={{ to: '/office/schedule', label: 'Jobs' }}
         title={`${lead?.name} · ${job.type}`}
         subtitle={
           <>

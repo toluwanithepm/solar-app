@@ -1,36 +1,63 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { fmtDateTime, roleLabel } from '../data/domain';
 import { signOut } from '../data/auth';
 import { update, useCurrentUser, useDb } from '../data/store';
 import { Icon, type IconName } from './Icon';
 import { Button, Logo } from './ui';
+import { officeTour, Tour } from './Guide';
+import '../styles/guide.css';
 
-const officeNav: { group?: string; items: { to: string; label: string; icon: IconName; end?: boolean }[] }[] = [
-  { items: [{ to: '/office', label: 'Home', icon: 'dashboard', end: true }] },
-  {
-    group: 'Sales',
-    items: [
-      { to: '/office/leads', label: 'Leads', icon: 'people' },
-      { to: '/office/quotes', label: 'Quotes', icon: 'description' },
-    ],
-  },
-  {
-    group: 'Operations',
-    items: [
-      { to: '/office/schedule', label: 'Schedule', icon: 'calendar' },
-      { to: '/office/service', label: 'Service', icon: 'wrench' },
-      { to: '/office/installations', label: 'Register', icon: 'shield' },
-    ],
-  },
-  {
-    group: 'Money',
-    items: [
-      { to: '/office/payments', label: 'Payments', icon: 'receipt' },
-      { to: '/office/reports', label: 'Reports', icon: 'chart' },
-    ],
-  },
-  { items: [{ to: '/office/settings', label: 'Settings', icon: 'settings' }] },
+/**
+ * Six sections in the order a sale happens (Hick's and Miller's laws: fewer, familiar choices).
+ * Sections that hold two pages show them as tabs (SubNav) instead of extra sidebar items.
+ */
+type NavItem = { to: string; label: string; icon: IconName; tour: string; match: string[]; exact?: boolean };
+const mainNav: NavItem[] = [
+  { to: '/office', label: 'Home', icon: 'dashboard', tour: 'nav-home', match: ['/office'], exact: true },
+  { to: '/office/leads', label: 'Customers', icon: 'people', tour: 'nav-customers', match: ['/office/leads'] },
+  { to: '/office/quotes', label: 'Quotes', icon: 'description', tour: 'nav-quotes', match: ['/office/quotes'] },
+  { to: '/office/schedule', label: 'Jobs', icon: 'calendar', tour: 'nav-jobs', match: ['/office/schedule', '/office/jobs'] },
+  { to: '/office/service', label: 'Aftercare', icon: 'shield', tour: 'nav-aftercare', match: ['/office/service', '/office/installations'] },
+  { to: '/office/payments', label: 'Money', icon: 'money', tour: 'nav-money', match: ['/office/payments', '/office/reports'] },
+];
+const footNav: NavItem[] = [
+  { to: '/office/help', label: 'Help', icon: 'help', tour: 'nav-help', match: ['/office/help'] },
+  { to: '/office/settings', label: 'Settings', icon: 'settings', tour: 'nav-settings', match: ['/office/settings'] },
+];
+
+const isActive = (item: NavItem, path: string) => item.match.some((m) => (item.exact ? path === m || path === m + '/' : path === m || path.startsWith(m + '/')));
+
+function SideLink({ item }: { item: NavItem }) {
+  const { pathname } = useLocation();
+  const active = isActive(item, pathname);
+  return (
+    <Link to={item.to} className={`side-link${active ? ' active' : ''}`} aria-current={active ? 'page' : undefined} data-tour={item.tour}>
+      <Icon name={item.icon} size={18} />
+      <span>{item.label}</span>
+    </Link>
+  );
+}
+
+/** Tabs for a section's pages, e.g. Aftercare: Service | Installed systems. */
+export function SubNav({ items }: { items: { to: string; label: string }[] }) {
+  return (
+    <nav className="subnav no-print" aria-label="Section">
+      {items.map((i) => (
+        <NavLink key={i.to} to={i.to} end>
+          {i.label}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+export const aftercareTabs = [
+  { to: '/office/service', label: 'Service and faults' },
+  { to: '/office/installations', label: 'Installed systems' },
+];
+export const moneyTabs = [
+  { to: '/office/payments', label: 'Invoices and payments' },
+  { to: '/office/reports', label: 'Reports' },
 ];
 
 // ---------- theme (office only: technician and customer screens stay light for outdoor reading) ----------
@@ -82,16 +109,15 @@ export function OfficeShell({ children, gap = 24 }: { children: ReactNode; gap?:
           <span className="sidebar__firm">{company.name || 'Solar Field Service'}</span>
         </Link>
         <div className="sidebar__nav">
-          {officeNav.map((section, i) => (
-            <div key={section.group ?? i} className="sidebar__group">
-              {section.group && <span className="sidebar__label">{section.group}</span>}
-              {section.items.map((item) => (
-                <NavLink key={item.to} to={item.to} end={item.end} className="side-link">
-                  <Icon name={item.icon} size={18} />
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
-            </div>
+          <div className="sidebar__group">
+            {mainNav.map((item) => (
+              <SideLink key={item.to} item={item} />
+            ))}
+          </div>
+        </div>
+        <div className="sidebar__group sidebar__foot">
+          {footNav.map((item) => (
+            <SideLink key={item.to} item={item} />
           ))}
         </div>
       </nav>
@@ -100,6 +126,7 @@ export function OfficeShell({ children, gap = 24 }: { children: ReactNode; gap?:
         <main className="office__main" style={{ gap }}>
           {children}
         </main>
+        <Tour steps={officeTour} />
       </div>
     </div>
   );

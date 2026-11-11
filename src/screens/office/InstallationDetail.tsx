@@ -24,7 +24,7 @@ export function InstallationDetail() {
   if (!ins) {
     return (
       <OfficeShell>
-        <PageHeader title="Installation not found" back={{ to: '/office/installations', label: 'Register' }} />
+        <PageHeader title="Installation not found" back={{ to: '/office/installations', label: 'Installed systems' }} />
       </OfficeShell>
     );
   }
@@ -40,7 +40,7 @@ export function InstallationDetail() {
   return (
     <OfficeShell>
       <PageHeader
-        back={{ to: '/office/installations', label: 'Register' }}
+        back={{ to: '/office/installations', label: 'Installed systems' }}
         title={lead.name}
         subtitle={`${ins.site} · installed ${fmtDate(ins.installedAt)} by ${ins.technicianIds.map((id) => db.users.find((u) => u.id === id)?.name).join(', ')}`}
         actions={

@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import '../../styles/office-ops.css';
 import { useCan } from '../../components/Guards';
 import { Icon } from '../../components/Icon';
-import { OfficeShell } from '../../components/OfficeShell';
+import { aftercareTabs, OfficeShell, SubNav } from '../../components/OfficeShell';
 import { PhotoThumb } from '../../components/PhotoInput';
 import { Dialog, MoneyField, SelectField, TextArea, TextField } from '../../components/forms';
 import { Badge, Button, EmptyState, PageHeader, Segmented } from '../../components/ui';
@@ -23,7 +23,8 @@ export function Service() {
 
   return (
     <OfficeShell>
-      <PageHeader title="Service and maintenance" subtitle="Reminders go to customers and the office 7 days before each visit" />
+      <PageHeader title="Aftercare" subtitle="Service visits, fault reports and maintenance plans. Reminders go out 7 days before each visit." />
+      <SubNav items={aftercareTabs} />
       <Segmented
         kind="tab"
         label="Service sections"

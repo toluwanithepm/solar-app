@@ -12,6 +12,8 @@ import { OfficeShell } from "../../components/OfficeShell";
 import { PhotoThumb } from "../../components/PhotoInput";
 import { Badge, Button, EmptyState, PageHeader } from "../../components/ui";
 import { Spinner } from "../../components/Loading";
+import { InfoTip } from "../../components/Guide";
+import type { GlossaryKey } from "../../data/glossary";
 import {
   describeSize,
   effectiveSize,
@@ -271,7 +273,10 @@ function QuoteEditor({ quoteId }: { quoteId: string }) {
                 />
               </div>
               <div className="field" style={{ flex: "0 1 170px" }}>
-                <label htmlFor="opt-backup">Night backup (hours)</label>
+                <label htmlFor="opt-backup">
+                  Night backup (hours)
+                  <InfoTip term="backup" />
+                </label>
                 <input
                   id="opt-backup"
                   type="number"
@@ -328,7 +333,10 @@ function QuoteEditor({ quoteId }: { quoteId: string }) {
                     </th>
                     {canSeeCost && (
                       <th scope="col" className="num">
-                        Unit cost
+                        <span className="term">
+                          Unit cost
+                          <InfoTip term="unitCost" />
+                        </span>
                       </th>
                     )}
                     <th scope="col" className="num">
@@ -532,7 +540,10 @@ function QuoteEditor({ quoteId }: { quoteId: string }) {
             <div className="card__body--pad stack" style={{ gap: 12 }}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                 <div className="field" style={{ flex: "1 1 200px" }}>
-                  <label htmlFor="dep">Deposit (%)</label>
+                  <label htmlFor="dep">
+                    Deposit (%)
+                    <InfoTip term="deposit" />
+                  </label>
                   <input
                     id="dep"
                     type="number"
@@ -598,6 +609,7 @@ function QuoteEditor({ quoteId }: { quoteId: string }) {
               <SumRow label="At handover" value={naira(total - deposit)} />
               <SumRow
                 label="Night backup"
+                tip="backup"
                 value={`${option?.backupHours ?? 0} hours`}
               />
             </div>
@@ -606,6 +618,7 @@ function QuoteEditor({ quoteId }: { quoteId: string }) {
                 <SumRow label="Your cost" value={naira(optionCost(option))} />
                 <SumRow
                   label="Margin"
+                  tip="margin"
                   value={
                     <span
                       className={`strong ${optionMarginPct(option) < 10 ? "danger" : "success"}`}
@@ -661,14 +674,17 @@ function QuoteEditor({ quoteId }: { quoteId: string }) {
               <div className="card__body--pad stack" style={{ gap: 10 }}>
                 <SumRow
                   label="Peak load"
+                  tip="peakLoad"
                   value={`${survey.peakW.toLocaleString("en-NG")} W`}
                 />
                 <SumRow
                   label="Daily energy"
+                  tip="dailyEnergy"
                   value={`${(survey.dailyWh / 1000).toFixed(1)} kWh`}
                 />
                 <SumRow
                   label="Sun hours"
+                  tip="sunHours"
                   value={`${survey.sunHours} h · ${survey.state}`}
                 />
                 <SumRow
@@ -778,10 +794,13 @@ function QuoteEditor({ quoteId }: { quoteId: string }) {
   );
 }
 
-function SumRow({ label, value }: { label: string; value: React.ReactNode }) {
+function SumRow({ label, value, tip }: { label: string; value: React.ReactNode; tip?: GlossaryKey }) {
   return (
     <div className="sum-row">
-      <span>{label}</span>
+      <span className="term">
+        {label}
+        {tip && <InfoTip term={tip} />}
+      </span>
       <span>{value}</span>
     </div>
   );

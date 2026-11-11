@@ -31,6 +31,9 @@ import {
 import { useCurrentUser, useDb } from "../../data/store";
 import type { DB } from "../../data/types";
 import "../../styles/office-sales.css";
+import { InfoTip, TourOffer } from "../../components/Guide";
+import { GettingStarted } from "../../components/GettingStarted";
+import type { GlossaryKey } from "../../data/glossary";
 
 const monthStart = (d = new Date()) =>
   new Date(d.getFullYear(), d.getMonth(), 1);
@@ -269,9 +272,11 @@ export function Dashboard() {
     value: string;
     note: string;
     trend?: "up" | "down";
+    tip?: GlossaryKey;
   }[] = [
     {
       label: "Collected this month",
+      tip: "collected",
       value: nairaShort(k.collected),
       note:
         k.change === null
@@ -281,6 +286,7 @@ export function Dashboard() {
     },
     {
       label: "Owed by customers",
+      tip: "owed",
       value: nairaShort(k.owed),
       note: k.overdue14
         ? `${k.overdue14} overdue by 14+ days`
@@ -294,6 +300,7 @@ export function Dashboard() {
     },
     {
       label: "Quote win rate",
+      tip: "winRate",
       value: `${k.winRate}%`,
       note: `${k.open} quote${k.open === 1 ? "" : "s"} open`,
     },
@@ -305,24 +312,26 @@ export function Dashboard() {
         title={`${greeting}, ${user?.name.split(" ")[0] ?? ""}`}
         subtitle={`${fmtDay(now.toISOString())} · ${teamsOut} technician${teamsOut === 1 ? "" : "s"} out today`}
         actions={
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <IfCan perm="edit.leads">
-              <Button variant="tonal" to="/office/leads">
-                Log enquiry
-              </Button>
-            </IfCan>
-            <IfCan perm="edit.quotes">
-              <Button to="/office/quotes">New quote</Button>
-            </IfCan>
-          </div>
+          <IfCan perm="edit.leads">
+            <Button to="/office/leads?new=1">
+              <Icon name="add" size={18} />
+              Log enquiry
+            </Button>
+          </IfCan>
         }
       />
+
+      {/* One onboarding prompt at a time: owners get the set-up list (which includes the tour), staff the tour offer */}
+      {user && can(user.role, "manage.settings") ? <GettingStarted /> : <TourOffer />}
 
       <section aria-label="This month" className="kpi-row">
         <div className="kpi-grid">
           {cards.map((c) => (
             <div key={c.label} className="card kpi">
-              <span className="kpi__label">{c.label}</span>
+              <span className="kpi__label">
+                {c.label}
+                {c.tip && <InfoTip term={c.tip} />}
+              </span>
               <span className="kpi__value">{c.value}</span>
               <span
                 className={`kpi__note${c.trend ? ` kpi__note--${c.trend}` : ""}`}
@@ -333,7 +342,10 @@ export function Dashboard() {
           ))}
           <IfCan perm="view.costs">
             <div className="card kpi">
-              <span className="kpi__label">Sales this month</span>
+              <span className="kpi__label">
+                Sales this month
+                <InfoTip term="margin" />
+              </span>
               <span className="kpi__value">{nairaShort(k.sales)}</span>
               <span className="kpi__note">
                 <span className="success">{k.margin.toFixed(1)}% margin</span>·

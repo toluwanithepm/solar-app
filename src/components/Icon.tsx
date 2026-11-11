@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   CircleAlert,
   CircleDot,
+  CircleHelp,
   Clock,
   Inbox,
   ChevronLeft,
@@ -93,6 +94,7 @@ const icons = {
   clock: Clock,
   alertCircle: CircleAlert,
   inbox: Inbox,
+  help: CircleHelp,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof icons | 'whatsapp';

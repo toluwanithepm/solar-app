@@ -692,3 +692,12 @@
     display: none;
   }
 }
+
+/* Alternate band so long landing pages read as separate chunks (common region) */
+.landing__section--alt {
+  margin-top: 56px;
+  padding-bottom: 56px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}

@@ -5,6 +5,7 @@ import { Dialog, SelectField, TextField } from '../../components/forms';
 import { AppBar, PhoneScreen, SyncBanner } from '../../components/PhoneScreen';
 import { PhotoInput, PhotoThumb } from '../../components/PhotoInput';
 import { Badge, Button, EmptyState, Stat } from '../../components/ui';
+import { Term } from '../../components/Guide';
 import { appliancePresets, effectiveSize, sunHoursByState } from '../../data/domain';
 import { useCurrentUser, useDb } from '../../data/store';
 import { addAppliance, createQuickLead, editSurvey, startSurvey, submitSurvey } from '../../data/techActions';
@@ -174,8 +175,8 @@ function SurveyEditor({ survey }: { survey: Survey }) {
 
         <section aria-label="Result" className="card card--pad stack" style={{ gap: 16 }}>
           <div className="p-grid-2" style={{ gap: 16 }}>
-            <Stat label="Peak load" value={`${survey.peakW.toLocaleString('en-NG')} W`} size={24} />
-            <Stat label="Daily energy" value={`${(survey.dailyWh / 1000).toFixed(1)} kWh`} size={24} />
+            <Stat label={<Term term="peakLoad">Peak load</Term>} value={`${survey.peakW.toLocaleString('en-NG')} W`} size={24} />
+            <Stat label={<Term term="dailyEnergy">Daily energy</Term>} value={`${(survey.dailyWh / 1000).toFixed(1)} kWh`} size={24} />
           </div>
           <div className="p-grid-2">
             <SelectField

@@ -92,7 +92,7 @@ export function Schedule() {
   return (
     <OfficeShell>
       <PageHeader
-        title="Schedule"
+        title="Jobs"
         subtitle={view === 'day' ? fmtDay(date.toISOString()) : `Week of ${rangeStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}`}
         actions={
           <>

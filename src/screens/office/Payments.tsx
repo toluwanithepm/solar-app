@@ -4,7 +4,8 @@ import '../../styles/office-ops.css';
 import { Dialog, MoneyField, SelectField } from '../../components/forms';
 import { useCan } from '../../components/Guards';
 import { Icon, type IconName } from '../../components/Icon';
-import { OfficeShell } from '../../components/OfficeShell';
+import { moneyTabs, OfficeShell, SubNav } from '../../components/OfficeShell';
+import { InfoTip } from '../../components/Guide';
 import { PhotoInput, PhotoThumb } from '../../components/PhotoInput';
 import { Badge, Button, EmptyState, PageHeader, Segmented } from '../../components/ui';
 import { fmtDate, fmtDateTime, invoiceBalance, invoicePaid, invoiceStatus, naira, nairaShort, whatsappLink } from '../../data/domain';
@@ -46,7 +47,8 @@ export function Payments() {
 
   return (
     <OfficeShell>
-      <PageHeader title="Payments" subtitle="Deposits, balances and instalments from accepted quotes" />
+      <PageHeader title="Money" subtitle="Deposits, balances and instalments from accepted quotes" />
+      <SubNav items={moneyTabs} />
 
       <div className="kpi-grid">
         <div className="card kpi">
@@ -110,7 +112,10 @@ export function Payments() {
                     {inv.number} · {inv.description} · recorded by {by?.name ?? 'staff'}, {fmtDateTime(p.at)}
                   </span>
                 </span>
-                <Badge tone="amber">Awaiting approval</Badge>
+                <span className="term">
+                  <Badge tone="amber">Awaiting approval</Badge>
+                  <InfoTip term="pendingApproval" />
+                </span>
                 {canApprove && (
                   <span style={{ display: 'flex', gap: 8 }}>
                     <Button variant="text" size="sm" onClick={() => reviewPayment(p.id, false)}>

@@ -3,6 +3,7 @@ import { Icon } from '../../components/Icon';
 import { PhoneScreen } from '../../components/PhoneScreen';
 import { usePaymentMethodsNote, usePublicLink, usePublicTarget, usePublicToken } from '../../components/PublicPage';
 import { Badge, Button, Logo, Stat } from '../../components/ui';
+import { InfoTip, Term } from '../../components/Guide';
 import { categoryLabel, defaultWarrantyYears, fmtDate, naira, optionTotal, quoteValidUntil, whatsappLink } from '../../data/domain';
 import { isExpired } from '../../data/salesActions';
 import type { PayResponse } from '../../../supabase/functions/_shared/contract';
@@ -163,8 +164,15 @@ export function CustomerQuote() {
             <span className="t-small muted">Installed, VAT included</span>
           </div>
           <div className="p-grid-2" style={{ gap: 16, paddingTop: 16, borderTop: '1px solid var(--divider)' }}>
-            <Stat label="Night backup" value={`${sel.backupHours} hours`} />
-            <Stat label="Deposit to start" value={naira(deposit)} />
+            <Stat label={<Term term="backup">Night backup</Term>} value={`${sel.backupHours} hours`} />
+            <Stat
+              label={
+                <span className="term">
+                  Deposit to start
+                  <InfoTip label="the deposit" text="You pay this when you accept, to book your installation. The rest is due as shown under Warranty and payment." />
+                </span>
+              }
+              value={naira(deposit)} />
           </div>
         </section>
 

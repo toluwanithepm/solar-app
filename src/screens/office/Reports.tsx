@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useCan } from "../../components/Guards";
 import { Icon } from "../../components/Icon";
-import { OfficeShell } from "../../components/OfficeShell";
+import { moneyTabs, OfficeShell, SubNav } from "../../components/OfficeShell";
 import { Badge, Button, EmptyState, PageHeader } from "../../components/ui";
 import {
   DAY,
@@ -280,7 +280,7 @@ export function Reports() {
   return (
     <OfficeShell>
       <PageHeader
-        title="Reports"
+        title="Money"
         subtitle={`${monthLabel}${techId ? ` · ${name(techId)}` : ""}`}
         actions={
           <div className="toolbar">
@@ -316,6 +316,7 @@ export function Reports() {
           </div>
         }
       />
+      <SubNav items={moneyTabs} />
 
       <section aria-label="Month summary" className="kpi-row">
         <div className="kpi-grid">

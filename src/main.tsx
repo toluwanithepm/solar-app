@@ -44,6 +44,7 @@ import { InstallationDetail } from './screens/office/InstallationDetail';
 import { Payments } from './screens/office/Payments';
 import { Reports } from './screens/office/Reports';
 import { Settings } from './screens/office/settings/Settings';
+import { Help } from './screens/office/Help';
 
 // Demo mode stands in for the server: reminders for balances, services and plan renewals (E8-1, E8-2, E9-3).
 // In backend mode the database runs them hourly (app.run_automations).
@@ -107,6 +108,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/office/payments" element={office(<Payments />)} />
         <Route path="/office/reports" element={office(<Reports />)} />
         <Route path="/office/settings/*" element={office(<Settings />)} />
+        <Route path="/office/help" element={office(<Help />)} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

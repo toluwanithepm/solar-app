@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import '../../styles/office-ops.css';
 import { Icon } from '../../components/Icon';
-import { OfficeShell } from '../../components/OfficeShell';
+import { aftercareTabs, OfficeShell, SubNav } from '../../components/OfficeShell';
+import { InfoTip } from '../../components/Guide';
 import { Badge, EmptyState, PageHeader, Segmented } from '../../components/ui';
 import { DAY, categoryLabel, fmtDate } from '../../data/domain';
 import { useDb } from '../../data/store';
@@ -32,7 +33,16 @@ export function Installations() {
 
   return (
     <OfficeShell>
-      <PageHeader title="Equipment register" subtitle={`${db.installations.length} systems installed · ${db.installations.reduce((s, i) => s + i.items.length, 0)} items under record`} />
+      <PageHeader
+        title="Aftercare"
+        subtitle={
+          <span className="term">
+            {db.installations.length} systems installed · {db.installations.reduce((s, i) => s + i.items.length, 0)} items under warranty record
+            <InfoTip term="installedSystem" />
+          </span>
+        }
+      />
+      <SubNav items={aftercareTabs} />
       <div className="ops-filters">
         <Segmented
           kind="tab"

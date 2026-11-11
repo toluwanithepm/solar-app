@@ -6,8 +6,19 @@ import { Badge, Button, Logo } from '../components/ui';
 import { roleLabel } from '../data/domain';
 import { createSeed } from '../data/seed';
 import { isBackend, resetDemoData, setSession, useDb } from '../data/store';
+import { journeySteps } from '../data/journey';
+import '../styles/guide.css';
 
 const demoIds = ['u_chidi', 'u_ngozi', 'u_musa', 'u_amaka'];
+
+const landingFaqs: { q: string; a: string }[] = [
+  { q: 'Who is it for?', a: 'Solar installation firms with an office team and technicians in the field, from a few installers to around fifty.' },
+  { q: 'What does it cost?', a: 'Every firm starts with a 14-day free trial. After that it is ₦7,500 per technician per month; office staff are included.' },
+  { q: 'Do my technicians need data or signal?', a: 'No. The technician app works offline: checklists, photos, serial scans and signatures are kept on the phone and sent when the signal returns.' },
+  { q: 'How do customers pay?', a: 'Quotes and invoices are sent as links. Customers pay by card, bank transfer or USSD through Paystack, and payments are matched to the invoice automatically.' },
+  { q: 'Can I use my own prices and see my margins?', a: 'Yes. You keep your own price list with costs and selling prices. Owners see the margin on every quote; office staff and technicians never see your costs.' },
+  { q: 'What happens if a phone is lost or someone leaves?', a: 'The owner can sign that person out of every phone in one step, and the phones delete the saved customer data as soon as they connect.' },
+];
 
 const features: { icon: IconName; title: string; text: string }[] = [
   { icon: 'description', title: 'Quotes in 15 minutes', text: 'Size the system on site and send a branded quote before you leave the customer.' },
@@ -166,6 +177,50 @@ export function Landing() {
                     {f.text}
                   </p>
                 </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="landing__section landing__section--alt" aria-labelledby="how">
+          <div className="landing__inner">
+            <span className="t-overline">How it works</span>
+            <h2 id="how" className="landing__h2" style={{ marginTop: 8 }}>
+              From first enquiry to a paid-up, serviced customer
+            </h2>
+            <ol className="help-journey" style={{ marginTop: 20 }}>
+              {journeySteps.map((s, i) => (
+                <li key={s.id} className="card">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="help-journey__num" aria-hidden="true">
+                      {i + 1}
+                    </span>
+                    <span className="t-section">{s.label}</span>
+                    <span className="badge badge--neutral" style={{ marginLeft: 'auto' }}>
+                      {s.who}
+                    </span>
+                  </div>
+                  <span className="t-small muted">{s.what}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section className="landing__section" aria-labelledby="faq">
+          <div className="landing__inner">
+            <span className="t-overline">Questions</span>
+            <h2 id="faq" className="landing__h2" style={{ marginTop: 8, marginBottom: 20 }}>
+              Frequently asked questions
+            </h2>
+            <div className="card faq">
+              {landingFaqs.map((f) => (
+                <details key={f.q}>
+                  <summary>{f.q}</summary>
+                  <p className="faq__answer" style={{ margin: 0 }}>
+                    {f.a}
+                  </p>
+                </details>
               ))}
             </div>
           </div>

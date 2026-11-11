@@ -551,3 +551,18 @@
   line-height: 20px;
   color: var(--muted);
 }
+
+/* Help and Settings sit at the bottom of the sidebar */
+.sidebar__foot {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 900px) {
+  .sidebar__foot {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+    flex-direction: row;
+  }
+}

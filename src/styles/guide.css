@@ -1,0 +1,470 @@
+/* ---------- In-place help: tooltips, journey bar, next step, tour, help page ---------- */
+
+.infotip {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.infotip__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--faint);
+  cursor: help;
+}
+/* Larger hit area than the glyph (Fitts's law) without taking space */
+.infotip__btn::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+.infotip__btn:hover,
+.infotip__btn[aria-expanded='true'] {
+  color: var(--primary);
+}
+.infotip__bubble {
+  position: absolute;
+  left: 50%;
+  z-index: 60;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 16px));
+  transform: translateX(-50%);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--bg);
+  font-size: 13px;
+  line-height: 19px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: left;
+  white-space: normal;
+  box-shadow: var(--shadow-pop);
+  animation: pop-in var(--dur-fast) var(--ease-in);
+}
+.infotip__bubble--below {
+  top: calc(100% + 8px);
+}
+.infotip__bubble--above {
+  bottom: calc(100% + 8px);
+}
+.infotip__term {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+.term {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Journey bar: six steps, done / current / to do (shape and label, not colour alone) */
+.journey {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.journey__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--faint);
+}
+/* Connector to the previous step */
+.journey__step + .journey__step::before {
+  content: '';
+  position: absolute;
+  top: 13px;
+  right: calc(50% + 18px);
+  left: calc(-50% + 18px);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border);
+}
+.journey__step--done::before,
+.journey__step--current::before {
+  background: var(--primary) !important;
+}
+.journey__dot {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--faint);
+}
+.journey__step--done {
+  color: var(--muted);
+}
+.journey__step--done .journey__dot {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.journey__step--current {
+  color: var(--text);
+  font-weight: 600;
+}
+.journey__step--current .journey__dot {
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-tint);
+}
+.journey--lost .journey__step--current .journey__dot {
+  border-color: var(--faint);
+  color: var(--faint);
+  box-shadow: none;
+}
+.journey--compact .journey__label {
+  display: none;
+}
+.journey--compact .journey__dot {
+  width: 10px;
+  height: 10px;
+  border-width: 0;
+  font-size: 0;
+  background: var(--border);
+}
+.journey--compact .journey__step--done .journey__dot,
+.journey--compact .journey__step--current .journey__dot {
+  background: var(--primary);
+  box-shadow: none;
+}
+.journey--compact .journey__step + .journey__step::before {
+  top: 4px;
+  right: calc(50% + 5px);
+  left: calc(-50% + 5px);
+}
+@media (max-width: 640px) {
+  .journey:not(.journey--compact) .journey__label {
+    font-size: 11px;
+    line-height: 14px;
+  }
+}
+
+.next-step {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px;
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary-tint) 45%, var(--surface));
+}
+.next-step__body {
+  flex: 1 1 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Tour */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+.tour__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 18, 23, 0.45);
+}
+.tour__spot {
+  position: fixed;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 4px var(--brand), 0 0 0 9999px rgba(15, 18, 23, 0.45);
+  pointer-events: none;
+  transition: all var(--dur) var(--ease);
+}
+.tour .tour__backdrop + .tour__spot {
+  /* the spot's own shadow dims the page; avoid double dimming */
+  background: transparent;
+}
+.tour:has(.tour__spot) .tour__backdrop {
+  background: transparent;
+}
+.tour__card {
+  position: fixed;
+  width: min(340px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-dialog);
+  outline: none;
+  animation: pop-in var(--dur) var(--ease-in);
+}
+.tour__progress {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+.tour__progress span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--track);
+}
+.tour__progress span.on {
+  background: var(--primary);
+}
+.tour__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.tour-offer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.tour-offer__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-tint);
+  color: var(--on-primary-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Getting started checklist */
+.setup {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.setup__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  /* 3 × 2 on a laptop, never 4 + 2 */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.setup__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--surface);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.setup__item:hover {
+  border-color: var(--border-button);
+  background: var(--surface-2);
+}
+.setup__item--done {
+  color: var(--muted);
+}
+.setup__item--done .setup__label {
+  text-decoration: line-through;
+}
+.setup__check {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--border-control);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.setup__item--done .setup__check {
+  border-color: var(--success);
+  background: var(--success);
+  color: #fff;
+}
+
+/* Sub-navigation for sections that hold two pages (Aftercare, Money) */
+.subnav {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-top: -8px;
+}
+.subnav a {
+  padding: 10px 12px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+.subnav a:hover {
+  color: var(--text);
+}
+.subnav a.active {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--primary);
+}
+
+/* Help page */
+.help-journey {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  counter-reset: step;
+}
+.help-journey li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+}
+.help-journey__num {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-tint);
+  color: var(--on-primary-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+.faq {
+  display: flex;
+  flex-direction: column;
+}
+.faq details {
+  border-top: 1px solid var(--divider);
+}
+.faq details:first-child {
+  border-top: 0;
+}
+.faq summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 12px 20px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 500;
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+.faq summary::after {
+  content: '+';
+  margin-left: auto;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--faint);
+}
+.faq details[open] summary::after {
+  content: '−';
+}
+.faq summary:hover {
+  background: var(--surface-2);
+}
+.faq__answer {
+  padding: 0 20px 16px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 21px;
+}
+.glossary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 4px 24px;
+  margin: 0;
+}
+.glossary div {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--divider);
+}
+.glossary dt {
+  font-weight: 600;
+  font-size: 14px;
+}
+.glossary dd {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.journey__step--skipped {
+  color: var(--faint);
+}
+.journey__step--skipped::before {
+  background: var(--primary) !important;
+}
+.journey__step--skipped .journey__dot {
+  border-style: dashed;
+  color: var(--faint);
+}
+.journey__note {
+  display: block;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 400;
+}
+.journey--compact .journey__step--skipped .journey__dot {
+  background: var(--border);
+}
+
+@media (max-width: 1100px) {
+  .setup__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .setup__list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .help-journey {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .help-journey {
+    grid-template-columns: 1fr;
+  }
+}
