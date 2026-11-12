@@ -302,7 +302,7 @@ describe('public enquiry form (E2-3) and fault reports (E8-3)', () => {
     assert.equal(r.status, 200);
     const { ticketId, number } = r.body as { ticketId: string; number: string };
     assert.match(number, /^T-\d+$/);
-    const jpeg = `data:image/jpeg;base64,${Buffer.from('fake jpeg bytes').toString('base64')}`;
+    const jpeg = `data:image/jpeg;base64,${Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from('fake jpeg bytes')]).toString('base64')}`;
     for (let i = 0; i < 3; i++) {
       assert.equal((await handlePublic({ action: 'report-photo', token, ticketId, dataUrl: jpeg, takenAt: new Date().toISOString() }, null, deps)).status, 200);
     }
@@ -321,7 +321,7 @@ describe('public enquiry form (E2-3) and fault reports (E8-3)', () => {
     const tokenA = await share(await claimsFor(OFFICE), 'fault_report', a.id);
     const tokenB = await share(await claimsFor(OFFICE), 'fault_report', b.id);
     const t = (await handlePublic({ action: 'report', token: tokenB, description: 'Panel cracked after storm' }, null, deps)).body as { ticketId: string };
-    const jpeg = `data:image/jpeg;base64,${Buffer.from('x').toString('base64')}`;
+    const jpeg = `data:image/jpeg;base64,${Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x78]).toString('base64')}`;
     assert.equal((await handlePublic({ action: 'report-photo', token: tokenA, ticketId: t.ticketId, dataUrl: jpeg, takenAt: new Date().toISOString() }, null, deps)).status, 404);
   });
 });

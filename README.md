@@ -140,6 +140,29 @@ Other commands:
 | `npm run test:db` | Database tests: migrations and access rules for each role, run in Postgres-in-WebAssembly |
 | `npm run db:seed` | Regenerate `supabase/seed.sql` from the demo data |
 | `npx supabase db push --linked` | Apply new migrations to the linked Supabase project |
+| `npm run test:security` | Security tests (see below) |
+| `npm run security:probe -- --site <url>` | Probe the deployed site and Supabase project from outside (read-only; add `--burst` to check rate limiting) |
+
+### Security testing
+
+`npm run test:security` attacks the real migrations and request handlers, offline. It covers:
+- **Database hardening:** row-level security on every table, pinned `search_path` on owner-rights functions, and service-only functions locked away from users.
+- **SQL injection:** through the batch-save function, link tokens and the enquiry form.
+- **Access control:** reading or changing another firm's data, privilege escalation, planting rows in another firm, subscription tampering, and audit-log tampering.
+- **Public API abuse:** malformed input, oversized or disguised uploads, leaked error details, and per-client rate limiting.
+- **Webhook forgery:** missing, wrong, tampered and replayed signatures.
+- **Unsafe links:** links built from stored data.
+
+`npm run security:probe` runs a similar set of attacks against the live deployment. It also checks the browser security headers (`vercel.json`) and scans the shipped JavaScript for leaked keys.
+
+Defences in place:
+- Row-level security for every firm and role.
+- Owner-rights functions that only the server can call.
+- Per-client rate limits on the public link API, using a hashed IP address and a fixed window (`RATE_LIMITS` in `supabase/functions/_shared/handlers.ts`), on top of the per-firm limits on enquiries and fault reports.
+- Signature and freshness checks on payment webhooks.
+- Uploads must be real JPEGs of at most 300 KB.
+- A strict Content-Security-Policy with no inline scripts, no framing and no plugins.
+- Phone sign-in rate limits come from Supabase Auth (Dashboard → Authentication → Rate Limits).
 
 Hosted builds need the same three `VITE_` variables set in Vercel. Without them the site runs in demo mode and shows a "Demo mode" warning. The Edge Functions need these secrets:
 - `PAYSTACK_SECRET_KEY`

@@ -5,6 +5,7 @@ import { SelectField } from '../../../components/forms';
 import { Badge, EmptyState } from '../../../components/ui';
 import { fmtDateTime } from '../../../data/domain';
 import { useDb } from '../../../data/store';
+import { safeHref } from '../../../lib/safeUrl';
 
 const topicLabel: Record<string, string> = {
   quote: 'Quotes',
@@ -51,7 +52,7 @@ export function Messages() {
               </span>
               <span className="muted">{m.text}</span>
               {m.link && (
-                <a href={m.link} target="_blank" rel="noreferrer" className="t-small" style={{ wordBreak: 'break-all' }}>
+                <a href={safeHref(m.link)} target="_blank" rel="noreferrer" className="t-small" style={{ wordBreak: 'break-all' }}>
                   {m.link}
                 </a>
               )}

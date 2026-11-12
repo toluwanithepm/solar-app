@@ -49,6 +49,11 @@ export function makeDeps(): Deps {
       const { error } = await service.storage.from(bucket).upload(path, bytes, { contentType, upsert: false });
       if (error) throw new Error(error.message);
     },
+    async rateLimit(bucket, client, limit, windowSeconds) {
+      const { data, error } = await service.rpc('svc_rate_limit', { p_bucket: bucket, p_key: client, p_limit: limit, p_window_seconds: windowSeconds });
+      if (error) throw new Error(error.message);
+      return data !== false;
+    },
     provider,
     activeProvider: activeProvider(),
     appUrl: env('PUBLIC_APP_URL').replace(/\/$/, ''),
@@ -60,3 +65,14 @@ export const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+/**
+ * Who is calling, for rate limiting: the first address in X-Forwarded-For (set by Supabase's edge), hashed so raw IP
+ * addresses are never stored. Empty when unknown (then no per-client limit applies; the firm-wide limits still do).
+ */
+export async function clientKey(req: Request): Promise<string> {
+  const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || req.headers.get('cf-connecting-ip') || '';
+  if (!ip) return '';
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`solar-rate:${ip}`));
+  return Array.from(new Uint8Array(digest).slice(0, 16), (b) => b.toString(16).padStart(2, '0')).join('');
+}

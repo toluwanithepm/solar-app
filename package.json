@@ -11,7 +11,9 @@
     "test:db": "node --import tsx --test --test-timeout=120000 supabase/tests/db.test.ts supabase/tests/sync.test.ts supabase/tests/public.test.ts",
     "android:sync": "npm run build && cap sync android",
     "android:open": "cap open android",
-    "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug"
+    "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "test:security": "node --import tsx --test --test-timeout=120000 supabase/tests/security.test.ts",
+    "security:probe": "node scripts/security-probe.mjs"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "^7.1.6",

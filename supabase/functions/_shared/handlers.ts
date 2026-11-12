@@ -19,7 +19,36 @@ export type Deps = {
   activeProvider: ProviderName;
   /** Where the web app runs, for the providers' return links, e.g. https://app.example.com */
   appUrl: string;
+  /** Count a request from one client; false when it is over the limit (svc_rate_limit). Optional in tests. */
+  rateLimit?: (bucket: string, client: string, limit: number, windowSeconds: number) => Promise<boolean>;
 };
+
+/**
+ * Requests allowed per client (hashed IP address) per window. Generous for a real customer, who opens a link a few
+ * times, pays once and sends one enquiry; tight enough to stop scripted abuse.
+ */
+export const RATE_LIMITS: Record<string, [limit: number, windowSeconds: number]> = {
+  view: [60, 600],
+  firm: [60, 600],
+  enquire: [5, 3600],
+  report: [5, 3600],
+  'report-photo': [15, 3600],
+  pay: [10, 600],
+  'pay-subscription': [10, 600],
+  verify: [30, 600],
+};
+
+/** Over the limit? A broken limiter never blocks customers (fails open) but is logged. */
+async function limited(deps: Deps, action: string, client: string): Promise<boolean> {
+  const rule = RATE_LIMITS[action];
+  if (!deps.rateLimit || !client || !rule) return false;
+  try {
+    return !(await deps.rateLimit(action, client, rule[0], rule[1]));
+  } catch (e) {
+    console.error(`Rate limiter unavailable: ${e instanceof Error ? e.message : e}`);
+    return false;
+  }
+}
 
 export type Result = { status: number; body: unknown };
 
@@ -83,9 +112,12 @@ export async function verifyAndRecord(deps: Deps, reference: string): Promise<Ve
   return { status: r.status === 'success' ? 'success' : 'failed', kind: r.kind, targetId: r.targetId };
 }
 
-export async function handlePublic(body: unknown, authHeader: string | null, deps: Deps): Promise<Result> {
+export async function handlePublic(body: unknown, authHeader: string | null, deps: Deps, client = ''): Promise<Result> {
   const req = body as PublicRequest;
-  if (!req || typeof req !== 'object' || typeof req.action !== 'string') return fail(400, 'Bad request');
+  if (!req || typeof req !== 'object' || Array.isArray(req) || typeof req.action !== 'string') return fail(400, 'Bad request');
+  if (!Object.hasOwn(RATE_LIMITS, req.action)) return fail(400, 'Unknown action');
+  // Counted before any other check, so guessing tokens or sending junk uses up the allowance too
+  if (await limited(deps, req.action, client)) return fail(429, 'Too many requests. Please wait a few minutes and try again.');
   try {
     switch (req.action) {
       case 'view': {
@@ -116,10 +148,18 @@ export async function handlePublic(body: unknown, authHeader: string | null, dep
         return ok((await deps.rpc('svc_report_fault', { p_token: req.token, p_description: str(req.description, 2000) })) as ReportResponse);
       }
       case 'report-photo': {
-        const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(str(req.dataUrl, 500_000));
+        if (typeof req.dataUrl === 'string' && req.dataUrl.length > 500_000) return fail(400, 'Photo is larger than 300 KB');
+        const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(str(req.dataUrl, 500_000));
         if (!m || !isUuid(req.ticketId)) return fail(400, 'Send a JPEG photo');
-        const bytes = Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0));
+        let bytes: Uint8Array;
+        try {
+          bytes = Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0));
+        } catch {
+          return fail(400, 'Send a JPEG photo');
+        }
         if (bytes.length > 300 * 1024) return fail(400, 'Photo is larger than 300 KB');
+        // A real JPEG starts with FF D8 FF; anything else renamed to .jpg is refused
+        if (bytes.length < 3 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) return fail(400, 'Send a JPEG photo');
         const slot = (await deps.rpc('svc_add_fault_photo', {
           p_token: str(req.token),
           p_ticket: req.ticketId,
