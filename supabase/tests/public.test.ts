@@ -263,6 +263,81 @@ describe('invoice payment and the return-page check (E9-2)', () => {
   });
 });
 
+describe('payment idempotency', () => {
+  /** An invoice that still has money owing, with a fresh customer link */
+  async function openInvoice() {
+    const inv = await one<{ id: string; amount: string }>(
+      `select i.id, i.amount from invoices i where i.kind = 'Balance' and not exists (select 1 from payments p where p.invoice_id = i.id) order by i.issued_at desc limit 1`,
+    );
+    return { ...inv, token: await share(await claimsFor(OFFICE), 'invoice', inv.id) };
+  }
+  /** A quote the customer can pay: earlier tests accept the seeded ones, so send a draft if needed */
+  async function sentQuote() {
+    const q = await one<{ id: string }>(`select id from quotes where status in ('Sent', 'Draft') and exists (select 1 from quote_lines l join quote_options o on o.id = l.option_id where o.quote_id = quotes.id) order by (status = 'Sent') desc, created_at desc limit 1`);
+    await pg.query(`update quotes set status = 'Sent', sent_at = now() where id = $1`, [q.id]);
+    return q;
+  }
+  const n = async (sql: string, params: unknown[] = []) => (await one<{ n: number }>(`select count(*)::int as n from (${sql}) x`, params)).n;
+
+  test('the webhook and the return-page check for one payment record it once, in any order and any number of times', async () => {
+    const inv = await openInvoice();
+    const pay = (await handlePublic({ action: 'pay', token: inv.token }, null, deps)).body as { reference: string };
+    const kobo = initialized.at(-1)!.amountKobo;
+    charges.set(pay.reference, { status: 'success', amountKobo: kobo, channel: 'card', paidAt: new Date().toISOString() });
+    // Webhook and customer return land together, then both are retried
+    await Promise.all([webhook(pay.reference, kobo), handlePublic({ action: 'verify', reference: pay.reference }, null, deps)]);
+    await webhook(pay.reference, kobo);
+    await handlePublic({ action: 'verify', reference: pay.reference }, null, deps);
+    assert.equal(await n('select * from payments where invoice_id = $1', [inv.id]), 1, 'one payment');
+    assert.equal(await n(`select * from messages where topic = 'receipt' and link like '%/pay/%' and text like $1`, [`%${Number(inv.amount).toLocaleString('en-NG')}%`]) >= 1, true);
+    assert.equal(await n(`select * from notifications where text like '%paid%' and link = '/office/payments' and created_at > now() - interval '1 minute' and text like $1`, [`%${(await one<{ number: string }>('select number from invoices where id = $1', [inv.id])).number}%`]), 1, 'office told once');
+  });
+
+  test('a burst of the same deposit webhook accepts the quote once: one job, one deposit and one balance', async () => {
+    const q = await sentQuote();
+    const optionId = (await one<{ id: string }>(`select id from quote_options where quote_id = $1 order by position limit 1`, [q.id])).id;
+    const token = await share(await claimsFor(OFFICE), 'quote', q.id);
+    const pay = (await handlePublic({ action: 'pay', token, optionId }, null, deps)).body as { reference: string };
+    const kobo = initialized.at(-1)!.amountKobo;
+    const results = await Promise.all(Array.from({ length: 5 }, () => webhook(pay.reference, kobo)));
+    assert.ok(results.every((r) => r.status === 200));
+    assert.equal(await n('select * from jobs where quote_id = $1', [q.id]), 1);
+    assert.equal(await n('select * from invoices where quote_id = $1', [q.id]), 2);
+    assert.equal(await n('select * from payments where gateway_reference = $1', [pay.reference]), 1);
+  });
+
+  test('paying the same invoice twice (two tabs) keeps both payments and tells the owner to refund one', async () => {
+    const inv = await openInvoice();
+    const first = (await handlePublic({ action: 'pay', token: inv.token }, null, deps)).body as { reference: string };
+    const second = (await handlePublic({ action: 'pay', token: inv.token }, null, deps)).body as { reference: string };
+    const kobo = initialized.at(-1)!.amountKobo;
+    await webhook(first.reference, kobo);
+    const r = await webhook(second.reference, kobo);
+    assert.equal(r.status, 200);
+    assert.equal((r.body as { overpaid?: boolean }).overpaid, true, 'the second payment is flagged');
+    assert.equal(await n('select * from payments where invoice_id = $1', [inv.id]), 2, 'real money is never dropped');
+    const note = await one<{ text: string; for_roles: string[] }>(`select text, for_roles from notifications where text like '%twice%' order by created_at desc limit 1`);
+    assert.ok(note, 'owner notified');
+    assert.match(note.text, /refund/i);
+    // Only the owner, who handles refunds (the driver returns the role array as "{owner}" or ["owner"])
+    assert.deepEqual(String(note.for_roles).match(/[a-z]+/g), ['owner']);
+  });
+
+  test('two deposit attempts for one quote: accepted once, the extra deposit is flagged for refund', async () => {
+    const q = await sentQuote();
+    const optionId = (await one<{ id: string }>(`select id from quote_options where quote_id = $1 order by position limit 1`, [q.id])).id;
+    const token = await share(await claimsFor(OFFICE), 'quote', q.id);
+    const a = (await handlePublic({ action: 'pay', token, optionId }, null, deps)).body as { reference: string };
+    const b = (await handlePublic({ action: 'pay', token, optionId }, null, deps)).body as { reference: string };
+    const kobo = initialized.at(-1)!.amountKobo;
+    await webhook(a.reference, kobo);
+    const r = await webhook(b.reference, kobo);
+    assert.equal((r.body as { overpaid?: boolean }).overpaid, true);
+    assert.equal(await n('select * from jobs where quote_id = $1', [q.id]), 1, 'one installation job');
+    assert.equal(await n('select * from invoices where quote_id = $1', [q.id]), 2, 'one deposit and one balance invoice');
+  });
+});
+
 describe('subscription (E11-2)', () => {
   test('only the owner pays; seats are active technicians; payment activates the plan', async () => {
     const office = await claimsFor(OFFICE);
